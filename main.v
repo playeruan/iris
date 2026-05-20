@@ -3,7 +3,9 @@ module main
 import os
 
 fn main() {
-  content := os.read_file("source.iris") or {return}
-  toks := Lexer.lex_input(content)
+
+  path := if os.args.len > 1 {os.args[1]} else {"source.iris"}
+
+  toks := Lexer.lex_file(path)
   println(toks)
 }

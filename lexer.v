@@ -1,5 +1,7 @@
 module main
 
+import os
+
 struct Lexer {
   mut: 
   source string
@@ -19,7 +21,7 @@ fn (l Lexer) tok(kind TokKind, value TokValue, text string) Token {
 
 @[noreturn]
 fn (l Lexer) lex_error(s string) {
-  eprintln("$Lexer Error -> {l.span} \"${s}\"")
+  eprintln("${l.span} Lexer Error -> \"${s}\"")
 	exit(1)
 }
 
@@ -145,11 +147,14 @@ fn (mut l Lexer) next_tok() Token {
   l.lex_error("invalid character ${c}")
 }
 
-fn Lexer.lex_input(input string) []Token {
+fn Lexer.lex_file(path string) []Token {
+
+  input := os.read_file(path) or {return []}
+
   mut l := Lexer{}
   l.source = input
   l.span.row = 1
-  l.span.file = "source.iris"
+  l.span.file = path
 
   mut ts := []Token{}
 

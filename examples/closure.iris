@@ -11,7 +11,7 @@ main: () -> void {
   x: const i32 = 2;
   cl: (i32) -> f32 = foo(x);
 
-  std.println(cl(3)); #12 
+  std.println(cl(3));
 
   ret 0;
 }

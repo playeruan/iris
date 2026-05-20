@@ -25,7 +25,7 @@ main: () -> void {
     .size = {128, 128},
   };
 
-  std.println(p.size); # {128, 128}
+  std.println(p.size);
 
   ret 0;
 }
