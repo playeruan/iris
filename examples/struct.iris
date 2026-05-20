@@ -1,0 +1,31 @@
+@import std
+
+struct Vec2 {
+  x: f32;
+  y: f32;
+}
+
+enum EntityKind {
+  NA,
+  PLAYER,
+  ENEMY,
+}
+
+struct Entity {
+  kind: EntityKind;
+  pos: Vec2;
+  size: Vec2 = {64, 64};
+}
+
+main: () -> void {
+  
+  p: Entity = Entity{
+    .kind = .PLAYER,
+    .pos = {0, 0},
+    .size = {128, 128},
+  };
+
+  std.println(p.size); # {128, 128}
+
+  ret 0;
+}
