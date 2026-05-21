@@ -30,6 +30,7 @@ enum TokKind as u8 {
   t_f32
   t_void
   t_bool
+  t_type
 
   l_int
   l_float
@@ -65,6 +66,7 @@ enum TokKind as u8 {
   semicolon
   arrow
   at
+  caret
 
   lparen
   rparen
@@ -73,7 +75,8 @@ enum TokKind as u8 {
   lbrace
   rbrace
 
-  const
+  tq_const
+
   ret
   if 
   else
@@ -102,12 +105,17 @@ fn (k TokKind) is_primitive_type() bool {
   return k.str().contains("t_")
 }
 
+fn (k TokKind) is_type_qualifier() bool {
+  return k.str().contains("tq_")
+}
+
 fn Token.from_str(s string) ?TokKind {
   return match s {
     "i32"   {.t_i32}
     "f32"   {.t_f32}
     "void"  {.t_void}
     "bool"  {.t_bool}
+    "type"  {.t_type}
 
     "="     {.o_eq}
     "<"     {.o_lt}
@@ -137,6 +145,7 @@ fn Token.from_str(s string) ?TokKind {
     ";"     {.semicolon}
     "->"    {.arrow}
     "@"     {.at}
+    "^"     {.caret}
 
     "("     {.lparen}
     ")"     {.rparen}
@@ -145,7 +154,7 @@ fn Token.from_str(s string) ?TokKind {
     "{"     {.lbrace}
     "}"     {.rbrace}
 
-    "const" {.const}
+    "const" {.tq_const}
     "ret"   {.ret}
     "if"    {.if}
     "else"  {.else}

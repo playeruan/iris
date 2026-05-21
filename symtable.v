@@ -1,0 +1,53 @@
+
+module main
+
+// -- Symbol
+
+type Symbol = SymbolVar | SymbolFunc | SymbolStruct
+
+struct SymbolVar {
+  qualifs []DeclQualifier
+  name string
+  type Type
+}
+
+struct SymbolFunc {
+  qualifs []DeclQualifier
+  name string
+  arg_names []string
+  type Type
+}
+
+struct SymbolStruct {
+  qualifs []DeclQualifier
+  name string
+  member_names []string
+  type Type
+}
+
+// -- Scope
+
+struct Scope {
+  parent ?&Scope
+  mut:
+  syms map[string]Symbol
+}
+
+// -- SymbolTable
+
+struct SymbolTable {
+  mut:
+  root_scope &Scope = &Scope{}
+  structs map[string]SymbolStruct
+}
+
+fn (s Scope) lookup_sym(name string) ?Symbol {
+  if name in s.syms {
+    return s.syms[name] or {panic("unreachable")}
+  }
+  if s.parent != none {
+    return s.parent.lookup_sym(name)
+  }
+  return none
+}
+
