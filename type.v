@@ -51,6 +51,7 @@ struct TypePrimitive {
 struct TypeFunc {
   qualifs []TypeQualifier
   arg_types []Type
+  arg_names []string
   ret Type
 }
 
@@ -80,8 +81,11 @@ fn (t Type) str() string {
     }
     TypeFunc {
       mut s := "("
-			for arg_t in t.arg_types {
-				s += arg_t.str()
+      assert(t.arg_names.len == 0 || t.arg_types.len == t.arg_names.len)
+			for i := 0; i < t.arg_types.len; i++ {
+        arg_t := t.arg_types[i]
+        arg_n := t.arg_names[i] or {""}
+				s += arg_n + ": "  + arg_t.str()
 				if arg_t != t.arg_types[t.arg_types.len-1] {
 					s += ", "
 				}

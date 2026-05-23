@@ -1,4 +1,8 @@
+
+foo: (x: i32) -> i32 {
+  ret x*2;
+}
+
 main: () -> void {
-  print("Hello, World!")
-  ret 2.2 + 8.1;
+  ret foo(3);
 }

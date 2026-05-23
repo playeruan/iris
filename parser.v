@@ -14,6 +14,7 @@ struct Parser {
 @[noreturn]
 fn (p Parser) parse_error(s string) {
   eprintln("${p.span} Parser Error -> \"${s}\"")
+  eprintln("current AST tree ${p.ast}")
 	exit(1)
 }
 
@@ -51,31 +52,221 @@ fn (mut p Parser) expect(k TokKind) Token {
 fn (mut p Parser) parse_type_qualifs() []TypeQualifier {
   mut qualifs := []TypeQualifier{}
   for p.peek().kind.is_type_qualifier() {
-    panic("TODO: type qualifier")
+    q := p.peek().kind.get_type_qualifier()
+    if qualifs.contains(q) {
+      p.parse_warning("qualifier ${q} already specified")
+    }
+    qualifs << q
+    p.advance()
   }
-  return []
+  return qualifs
 }
 
 fn (mut p Parser) parse_primary() Expr {
   t := p.peek()
-  if t.kind.is_type_qualifier() || t.kind.is_primitive_type() ||
-    t.kind == .caret {
+  if t.kind.is_type_qualifier() || t.kind.is_primitive_type() {
     p.parse_type()
   }
   p.advance()
   return match t.kind {
-    .l_int {Expr{}}
-    .l_float {Expr{}}
-    // TODO: ^^^^ these
+    .l_int    {
+      ExprLiteralPrimitive{
+        type: TypePrimitive {
+          qualifs: [.const]
+          type: .i32
+        }
+        value: LiteralValue{i64: t.text.i64()}
+      }
+    }
+    .l_float  {
+      ExprLiteralPrimitive{
+        type: TypePrimitive {
+          qualifs: [.const]
+          type: .f32
+        }
+        value: LiteralValue{f64: t.text.f64()}
+      }
+    }
+    .l_true, .l_false {
+      ExprLiteralPrimitive{
+        type: TypePrimitive {
+          qualifs: [.const]
+          type: .bool
+        }
+        value: LiteralValue{bool: t.kind == .l_true}
+      }
+    }
+    .l_string {
+      ExprLiteralPrimitive{
+        type: TypePrimitive {
+          qualifs: [.const]
+          type: .string
+        }
+        value: LiteralValue{string: t.text}
+      } 
+    }
+    .identifier {
+      if p.peek().kind == .lbrace {
+        // Struct instanciation
+        p.expect(.lbrace)
+        mut argv := []Expr{}
+        for p.peek().kind != .rbrace {
+          argv << p.parse_expr(.literal)
+            if p.peek().kind != .rbrace {
+              p.expect(.comma)
+            }
+        }
+        p.expect(.rbrace)
+        ExprLiteralStruct{
+          type: TypeStruct {
+            qualifs: [.const]
+            name: t.text
+          }
+          argv: argv
+        }
+      } else {
+        ExprVar{name: t.text}
+      }
+    }
+    .lparen {
+      e := ExprGroup{inner: p.parse_expr(.literal)}
+      p.expect(.rparen)
+      e
+    }
+    .lsquare {
+      mut elems := []Expr{}
+      for p.peek().kind != .rsquare {
+        elems << p.parse_expr(.literal)
+        if p.peek().kind != .rsquare {
+          p.expect(.comma)
+        }
+      }
+      p.expect(.rsquare)
+      ExprLiteralArray{argv: elems}
+    }
+    .o_and {
+      ExprRef{inner: p.parse_expr(.prefix)}
+    }
+    .o_caret {
+      ExprDeref{inner: p.parse_expr(.prefix)}
+    }
+    else {p.parse_error("invalid expr token of kind ${t.kind}")}
+  }
+}
+
+fn (mut p Parser) parse_call(callee Expr) ExprCall {
+  mut argv := []Expr{}
+  for p.peek().kind != .rparen {
+    argv << p.parse_expr(.literal)
+    if p.peek().kind != .rparen {
+      p.expect(.comma)
+    }
+  }
+  p.expect(.rparen)
+  return ExprCall{callee: callee, argv: argv}
+}
+
+fn (mut p Parser) parse_binary(left Expr, op string, prec Precedence) Expr {
+  right := p.parse_expr(prec)
+  return ExprBinary{op: op, left: left, right: right}
+}
+
+fn (mut p Parser) parse_expr(pr Precedence) Expr {
+  mut expr := p.parse_primary()
+
+  for int(pr) < int(p.peek().kind.precedence()) {
+    op_tok := p.advance() 
+    expr = match op_tok.kind {
+      .lparen {p.parse_call(expr)}
+      .lsquare {
+        idx := p.parse_expr(.literal)
+        p.expect(.rsquare)
+        ExprIndex{indexee: expr, idx: idx}
+      }
+      .dot {
+        ident := p.expect(.identifier)
+        ExprAccess{accessee: expr, member: ExprVar{name: ident.text}}
+      }
+      else {p.parse_binary(expr, op_tok.text, op_tok.kind.precedence())}
+    }
+  }
+  return expr
+}
+
+// parsing statements 
+
+fn (mut p Parser) parse_block() StmtBlock {
+  p.expect(.lbrace)
+  mut stmts := []Stmt{}
+  for p.peek().kind != .rbrace {
+    stmts << p.parse_stmt()
+  }
+  p.expect(.rbrace)
+  return StmtBlock {
+    stmts: stmts 
+    span: p.span
+  }
+}
+
+fn (mut p Parser) parse_stmt_expr() Stmt {
+  expr := p.parse_expr(.literal) 
+
+  if expr is ExprVar && p.peek().kind == .colon {
+    // declaration
+    p.expect(.colon)
+    typ := p.parse_type()
+
+    if typ is TypeFunc {
+      b := p.parse_block()
+      return StmtDeclFunc {
+        sym: SymbolFunc {
+          name: expr.name 
+          type: typ
+        }
+        block: b 
+        span: p.span
+      }
+    } else {
+      p.expect(.o_eq)
+        val := p.parse_expr(.literal)
+        p.expect(.semicolon)
+        return StmtDeclVar {
+          sym: SymbolVar {
+          name: expr.name
+          type: typ
+        }    
+        value: val 
+        span: p.span
+      }
+    }
+  }
+
+  p.expect(.semicolon)
+  return StmtExpr {
+    expr: expr
+    span: p.span
+  }
+}
+
+fn (mut p Parser) parse_stmt() Stmt {
+  return match p.peek().kind {
+    .ret {
+      p.advance()
+      r := StmtReturn{
+        expr: p.parse_expr(.literal)
+        span: p.span
+      }
+      p.expect(.semicolon)
+      r
+    }
+    else {p.parse_stmt_expr()}
   }
 }
 
 fn (mut p Parser) parse_type() Type {
-  qualifs := []TypeQualifier{}
-  //TODO: qualifs := p.parse_type_qualifs()
+  qualifs := p.parse_type_qualifs()
   if p.peek().kind == .lparen {
     // function
-    p.advance()
     return p.parse_func_type(qualifs)
   } else if p.peek().kind == .lsquare {
     // array
@@ -85,7 +276,7 @@ fn (mut p Parser) parse_type() Type {
       qualifs: qualifs
       inner: p.parse_type()
     }
-  } else if p.peek().kind == .caret {
+  } else if p.peek().kind == .o_caret {
     p.advance()
     return TypePointer{
       qualifs: qualifs
@@ -110,17 +301,17 @@ fn (mut p Parser) parse_type() Type {
 
 fn (mut p Parser) parse_func_type(qualifs []TypeQualifier) TypeFunc {
   p.expect(.lparen)
-  mut param_names := []string{}
+  mut arg_names := []string{}
   mut arg_types := []Type{}
 
   for p.peek().kind != .rparen {
-    param_names << p.advance().text
+    arg_names << p.advance().text
     p.expect(.colon)
     arg_types << p.parse_type()
-  }
 
-  if p.peek().kind != .rparen {
-    p.expect(.comma)
+    if p.peek().kind != .rparen {
+      p.expect(.comma)
+    }
   }
 
   p.expect(.rparen)
@@ -129,6 +320,15 @@ fn (mut p Parser) parse_func_type(qualifs []TypeQualifier) TypeFunc {
   return TypeFunc {
     qualifs: qualifs
     arg_types: arg_types
+    arg_names: arg_names
     ret: ret
   }
+}
+
+fn Parser.parse_program(toks []Token) []Stmt {
+  mut p := Parser{toks: toks}
+  for p.peek().kind != .eof {
+    p.ast << p.parse_stmt()
+  }
+  return p.ast
 }

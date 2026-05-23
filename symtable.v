@@ -14,7 +14,6 @@ struct SymbolVar {
 struct SymbolFunc {
   qualifs []DeclQualifier
   name string
-  arg_names []string
   type Type
 }
 

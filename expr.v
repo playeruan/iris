@@ -3,14 +3,6 @@ module main
 
 // -- Expr
 
-enum LiteralKind as u8 {
-  int
-  float
-  bool
-  string
-  // TODO: type
-}
-
 union LiteralValue {
   i64 i64 
   f64 f64
@@ -22,14 +14,15 @@ type Expr =
   ExprVar | ExprLiteralPrimitive | ExprGroup |
   ExprCall | ExprIndex | ExprAccess |
   ExprType | ExprCast | ExprLiteralStruct | 
-  ExprLiteralArray | ExprRef | ExprDeref
+  ExprLiteralArray | ExprRef | ExprDeref | 
+  ExprBinary | ExprUnary
 
 struct ExprVar {
   name string
 }
 
 struct ExprLiteralPrimitive {
-  kind LiteralKind
+  type TypePrimitive 
   value LiteralValue 
 }
 

@@ -8,4 +8,6 @@ fn main() {
 
   toks := Lexer.lex_file(path)
   println(toks)
+  ast := Parser.parse_program(toks)
+  println(ast)
 }

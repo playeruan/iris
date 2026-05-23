@@ -59,6 +59,7 @@ enum TokKind as u8 {
   o_oror
   o_exclam
   o_tilde
+  o_caret
 
   dot
   comma
@@ -66,7 +67,6 @@ enum TokKind as u8 {
   semicolon
   arrow
   at
-  caret
 
   lparen
   rparen
@@ -96,7 +96,7 @@ fn (k TokKind) precedence() Precedence {
     .o_star, .o_slash, .o_and, .o_or {.multiplication}
     // {bitshift}
     .o_exclam, .o_tilde {.prefix}
-    .dot, .lsquare {.postfix}
+    .dot, .lsquare, .lparen {.postfix}
     else {.literal}
   }
 }
@@ -107,6 +107,13 @@ fn (k TokKind) is_primitive_type() bool {
 
 fn (k TokKind) is_type_qualifier() bool {
   return k.str().contains("tq_")
+}
+
+fn (k TokKind) get_type_qualifier() TypeQualifier {
+  return match k {
+    .tq_const {.const}
+    else {panic("${k} is not a valid type qualifier")}
+  }
 }
 
 fn Token.from_str(s string) ?TokKind {
@@ -138,6 +145,7 @@ fn Token.from_str(s string) ?TokKind {
     "||"    {.o_oror}
     "!"     {.o_exclam}
     "~"     {.o_tilde}
+    "^"     {.o_caret}
 
     "."     {.dot}
     ","     {.comma}
@@ -145,7 +153,6 @@ fn Token.from_str(s string) ?TokKind {
     ";"     {.semicolon}
     "->"    {.arrow}
     "@"     {.at}
-    "^"     {.caret}
 
     "("     {.lparen}
     ")"     {.rparen}
