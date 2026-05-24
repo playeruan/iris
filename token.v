@@ -125,6 +125,8 @@ fn Token.from_str(s string) ?TokKind {
     "void"  {.t_void}
     "bool"  {.t_bool}
     "type"  {.t_type}
+    "true"  {.l_true}
+    "false" {.l_false}
 
     "="     {.o_eq}
     "<"     {.o_lt}

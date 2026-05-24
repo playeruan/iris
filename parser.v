@@ -106,7 +106,7 @@ fn (mut p Parser) parse_primary() Expr {
       } 
     }
     .identifier {
-      if p.peek().kind == .lbrace {
+      /*if p.peek().kind == .lbrace {
         // Struct instanciation
         p.expect(.lbrace)
         mut argv := []Expr{}
@@ -124,9 +124,9 @@ fn (mut p Parser) parse_primary() Expr {
           }
           argv: argv
         }
-      } else {
+      } else {*/
         ExprVar{name: t.text}
-      }
+      //}
     }
     .lparen {
       e := ExprGroup{inner: p.parse_expr(.literal)}
@@ -288,7 +288,39 @@ fn (mut p Parser) parse_while() StmtWhile {
     block: b
     span: p.span
   }
-  
+}
+
+fn (mut p Parser) parse_branch() StmtBranch {
+  p.expect(.if)
+
+  if_g := p.parse_expr(.literal)
+  if_b := p.parse_block()
+
+  mut elif_gs := []Expr{}
+  mut elif_bs := []StmtBlock{}
+
+  for p.peek().kind == .elif {
+    p.expect(.elif)
+    dump(p.peek())
+    elif_gs << p.parse_expr(.literal)
+    dump(p.peek())
+    elif_bs << p.parse_block()
+  }
+
+  mut else_b := ?StmtBlock(none)
+
+  if p.peek().kind == .else {
+    p.expect(.else)
+    else_b = p.parse_block()
+  }
+
+  return StmtBranch {
+    if_guard: if_g 
+    if_block: if_b
+    elif_guards: if elif_gs.len > 0 {elif_gs} else {none}
+    elif_blocks: if elif_bs.len > 0 {elif_bs} else {none}
+    else_block: else_b
+  }
 }
 
 fn (mut p Parser) parse_stmt() Stmt {
@@ -317,6 +349,7 @@ fn (mut p Parser) parse_stmt() Stmt {
     }
     .while  {p.parse_while()}
     .for    {p.parse_error("for not yet supported because I'm lazy")}
+    .if     {p.parse_branch()}
     .else   {p.parse_error("standalone else statement")}
     .elif   {p.parse_error("standalone elif statement")}
     else {p.parse_stmt_expr()}

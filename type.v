@@ -90,14 +90,17 @@ fn (t Type) str() string {
 					s += ", "
 				}
 			}
+      if t.arg_names.len == 0 {
+        s += "void"
+      }
 			s += ") -> ${t.ret}"
 			s
     }
     TypePointer {
-      "^${t.inner.str()}"
+      "Ptr <${t.inner.str()}>"
     }
     TypeArray {
-      "[]${t.inner.str()}"
+      "Array <${t.inner.str()}>"
     }
   }
   return type_str
