@@ -144,6 +144,7 @@ fn (mut p Parser) parse_primary() Expr {
       p.expect(.rsquare)
       ExprLiteralArray{argv: elems}
     }
+    .o_minus, .o_exclam, .o_tilde, .o_plusplus, .o_minusminus {p.parse_unary_prefix(t.text, .prefix)}
     .o_and {
       ExprRef{inner: p.parse_expr(.prefix)}
     }
@@ -164,6 +165,11 @@ fn (mut p Parser) parse_call(callee Expr) ExprCall {
   }
   p.expect(.rparen)
   return ExprCall{callee: callee, argv: argv}
+}
+
+fn (mut p Parser) parse_unary_prefix(op string, prec Precedence) Expr {
+  right := p.parse_expr(prec)
+  return ExprUnary{op: op, operand: right}
 }
 
 fn (mut p Parser) parse_binary(left Expr, op string, prec Precedence) Expr {
@@ -187,9 +193,14 @@ fn (mut p Parser) parse_expr(pr Precedence) Expr {
         ident := p.expect(.identifier)
         ExprAccess{accessee: expr, member: ExprVar{name: ident.text}}
       }
+      .at {
+        t := p.parse_type()
+        ExprCast{castee: expr, type: t}
+      }
       else {p.parse_binary(expr, op_tok.text, op_tok.kind.precedence())}
     }
   }
+
   return expr
 }
 
@@ -315,8 +326,13 @@ fn (mut p Parser) parse_func_type(qualifs []TypeQualifier) TypeFunc {
   }
 
   p.expect(.rparen)
-  p.expect(.arrow)
-  ret := p.parse_type()
+  mut ret := Type(TypePrimitive{type: .void})
+
+  if p.peek().kind == .arrow {
+    p.expect(.arrow)
+    ret = p.parse_type()
+  }
+
   return TypeFunc {
     qualifs: qualifs
     arg_types: arg_types
