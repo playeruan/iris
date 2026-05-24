@@ -223,33 +223,11 @@ fn (mut p Parser) parse_stmt_expr() Stmt {
   expr := p.parse_expr(.literal) 
 
   if expr is ExprVar && p.peek().kind == .colon {
-    // declaration
-    p.expect(.colon)
-    typ := p.parse_type()
+    return p.parse_decl(expr) 
+  }
 
-    if typ is TypeFunc {
-      b := p.parse_block()
-      return StmtDeclFunc {
-        sym: SymbolFunc {
-          name: expr.name 
-          type: typ
-        }
-        block: b 
-        span: p.span
-      }
-    } else {
-      p.expect(.o_eq)
-        val := p.parse_expr(.literal)
-        p.expect(.semicolon)
-        return StmtDeclVar {
-          sym: SymbolVar {
-          name: expr.name
-          type: typ
-        }    
-        value: val 
-        span: p.span
-      }
-    }
+  if p.peek().kind == .o_eq {
+    return p.parse_assignment(expr)
   }
 
   p.expect(.semicolon)
@@ -257,6 +235,60 @@ fn (mut p Parser) parse_stmt_expr() Stmt {
     expr: expr
     span: p.span
   }
+}
+
+fn (mut p Parser) parse_decl(var_expr ExprVar) Stmt {
+  p.expect(.colon)
+    typ := p.parse_type()
+
+    if typ is TypeFunc {
+      b := p.parse_block()
+      return StmtDeclFunc {
+        sym: SymbolFunc {
+        name: var_expr.name 
+        type: typ
+      }
+      block: b 
+      span: p.span
+      }
+    } else {
+      p.expect(.o_eq)
+      val := p.parse_expr(.literal)
+      p.expect(.semicolon)
+      return StmtDeclVar {
+        sym: SymbolVar {
+        name: var_expr.name
+        type: typ
+      }    
+      value: val 
+      span: p.span
+    }
+  }
+}
+
+fn (mut p Parser) parse_assignment(left Expr) StmtAssign {
+  p.expect(.o_eq)
+  v := p.parse_expr(.literal)
+  p.expect(.semicolon)
+  return StmtAssign {
+    assignee: left
+    val: v
+    span: p.span
+  }
+}
+
+fn (mut p Parser) parse_while() StmtWhile {
+  p.expect(.while)
+
+  g := p.parse_expr(.literal)
+  b := p.parse_block()
+
+  return StmtWhile {
+    guard: g
+    block: b
+    span: p.span
+  }
+  
 }
 
 fn (mut p Parser) parse_stmt() Stmt {
@@ -270,9 +302,28 @@ fn (mut p Parser) parse_stmt() Stmt {
       p.expect(.semicolon)
       r
     }
+    .lbrace {p.parse_block()}
+    .continue {
+      p.advance()
+      c := StmtContinue{span: p.span}
+      p.expect(.semicolon)
+      c
+    }
+    .break  {
+      p.advance()
+      b := StmtBreak{span: p.span}
+      p.expect(.semicolon)
+      b
+    }
+    .while  {p.parse_while()}
+    .for    {p.parse_error("for not yet supported because I'm lazy")}
+    .else   {p.parse_error("standalone else statement")}
+    .elif   {p.parse_error("standalone elif statement")}
     else {p.parse_stmt_expr()}
   }
 }
+
+// parsing types
 
 fn (mut p Parser) parse_type() Type {
   qualifs := p.parse_type_qualifs()

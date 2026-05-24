@@ -22,7 +22,7 @@ type Stmt =
   StmtExpr | StmtBlock | StmtDeclVar |
   StmtDeclFunc | StmtDeclMember | StmtDeclStruct |
   StmtReturn | StmtContinue | StmtBreak |
-  StmtBranch | StmtWhile | StmtFor
+  StmtBranch | StmtWhile | StmtFor | StmtAssign
 
 struct StmtExpr {
   expr Expr
@@ -91,5 +91,11 @@ struct StmtContinue {
 }
 
 struct StmtBreak {
+  span Span
+}
+
+struct StmtAssign {
+  assignee Expr
+  val Expr
   span Span
 }
