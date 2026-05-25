@@ -20,7 +20,6 @@ struct SymbolFunc {
 struct SymbolStruct {
   qualifs []DeclQualifier
   name string
-  member_names []string
   type Type
 }
 

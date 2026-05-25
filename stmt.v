@@ -48,7 +48,8 @@ struct StmtDeclFunc {
 
 struct StmtDeclMember {
   name string
-  default_value Expr
+  type Type
+  default_value ?Expr
   span Span
 }
 

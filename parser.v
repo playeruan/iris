@@ -327,8 +327,14 @@ fn (mut p Parser) parse_stmt() Stmt {
   return match p.peek().kind {
     .ret {
       p.advance()
+      dump(p.peek())
       r := StmtReturn{
-        expr: p.parse_expr(.literal)
+        expr: 
+          if p.peek().kind == .semicolon {
+            ExprLiteralPrimitive{type: TypePrimitive{type: .void}}
+          } else {
+            p.parse_expr(.literal)
+          }
         span: p.span
       }
       p.expect(.semicolon)
@@ -346,6 +352,47 @@ fn (mut p Parser) parse_stmt() Stmt {
       b := StmtBreak{span: p.span}
       p.expect(.semicolon)
       b
+    }
+    .struct {
+      p.advance() 
+      t_name := p.expect(.identifier)
+      p.expect(.lbrace)
+
+      mut member_decls := []StmtDeclMember{}
+      
+      for p.peek().kind != .rbrace {
+        n := p.expect(.identifier).text 
+        p.expect(.colon)
+        t := p.parse_type()
+        mut def_val := ?Expr(none)
+
+        if p.peek().kind == .o_eq {
+          p.advance()
+          def_val = p.parse_expr(.literal)
+        }
+
+        p.expect(.semicolon)
+        member_decls << StmtDeclMember{
+          name: n 
+          type: t
+          default_value: def_val
+          span: p.span
+        }
+      }
+      
+      p.expect(.rbrace)
+
+      StmtDeclStruct{
+        sym: SymbolStruct{
+          name: t_name.text
+          type: TypeStruct {
+            name: t_name.text
+          }
+        } 
+        members: member_decls
+        span: p.span
+      }
+
     }
     .while  {p.parse_while()}
     .for    {p.parse_error("for not yet supported because I'm lazy")}

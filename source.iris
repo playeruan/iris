@@ -1,2 +1,9 @@
 
-get_m: () -> [][]i32 {}
+struct Vec2 {
+  x: i32 = 0;
+  x: i32 = 0;
+}
+
+main: () -> const i32 {
+  ret 0;
+}

@@ -10,4 +10,5 @@ fn main() {
   println(toks)
   ast := Parser.parse_program(toks)
   println(ast)
+  Checker.check_program(ast)
 }
