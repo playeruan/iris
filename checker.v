@@ -158,10 +158,13 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
       }
 
       if stmt.default_value != none {
-        c.check_expr(stmt.default_value)
+        vt := c.check_expr(stmt.default_value)
+        if join_types(decl_t, vt) == none {
+          c.checker_error("cannot implicitly cast default value of type ${vt} to ${decl_t} for member ${stmt.name}")
+        }
       }
 
-      // TODO: check value type matches
+
     }
 
     StmtDeclStruct {
@@ -212,6 +215,13 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
       } else {
         c.checker_error("cannot return if not inside a function")
       }
+    }
+
+    StmtAssign {
+      // TODO: check symbol exists
+      _ := c.check_expr(stmt.val)
+      // TODO: check types are coercible right to left
+
     }
 
     StmtContinue, StmtBreak {} //TODO: check if inside while or for

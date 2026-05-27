@@ -1,8 +1,4 @@
 
-struct Entity {
-  update: (self: ^Entity); 
-}
-
-main: () {
-  e: Entity = 0;
+struct Vec2 {
+  x: i32 = 1.0;
 }

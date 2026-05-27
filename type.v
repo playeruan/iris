@@ -105,3 +105,77 @@ fn (t Type) str() string {
   }
   return type_str
 }
+
+fn (t Type) unqual() Type {
+  return match t {
+    TypePrimitive {TypePrimitive{qualifs: [], type: t.type}}
+    TypeFunc {TypeFunc {qualifs: [], arg_types: t.arg_types, arg_names: t.arg_names, ret: t.ret}}
+    TypePointer {TypePointer{qualifs: [], inner: t.inner}}
+    TypeArray {TypeArray{qualifs: [], inner: t.inner}}
+    TypeStruct {TypeStruct{qualifs: [], name: t.name}}
+  }
+}
+
+fn are_types_equal(a Type, b Type) bool {
+  ua := a.unqual()
+  ub := b.unqual()
+  return match ua {
+    TypePrimitive{
+      ub is TypePrimitive && ub.type == ua.type
+    }
+    TypeFunc {
+      if ub !is TypeFunc {return false}
+      if ua.arg_types.len != ub.arg_types.len {return false}
+      if !are_types_equal(ua.ret, ub.ret) {return false}
+      for i := 0; i < ua.arg_types.len; i++ {
+        ta := ua.arg_types[i]
+        tb := ub.arg_types[i]
+        if !are_types_equal(ta, tb) {return false}
+      }
+      true
+    }
+    TypePointer {
+      ub is TypePointer && are_types_equal(ua.inner, ub.inner)
+    }
+    TypeArray {
+      ub is TypeArray && are_types_equal(ua.inner, ub.inner)
+    }
+    TypeStruct {
+      ub is TypeStruct && ua.name == ub.name
+    }
+  }
+}
+
+fn join_types(a Type, b Type) ?Type {
+  if are_types_equal(a, b) { return a.unqual() }
+
+  ua := a.unqual()
+  ub := b.unqual()  
+
+  non_joinable := [BuiltinType.string, .void, .bool]
+  if ua is TypePrimitive && ub is TypePrimitive {
+    if non_joinable.contains(ua.type) || non_joinable.contains(ub.type) {
+      return none
+    }
+    // TODO: handle other types in the future
+  }
+
+  return none
+}
+
+fn cast_types(from Type, to Type) ?Type {
+  if are_types_equal(from, to) { return from.unqual() }
+
+  uf := from.unqual()
+  ut := to.unqual()
+
+  if uf is TypePointer && ut is TypePointer {
+    return ut
+  }
+
+  if uf is TypePrimitive && ut is TypePrimitive {
+    return none // TODO: handle
+  }
+
+  return none
+}
