@@ -1,9 +1,8 @@
 
-struct Vec2 {
-  x: i32 = 0;
-  x: i32 = 0;
+struct Entity {
+  update: (self: ^Entity); 
 }
 
-main: () -> const i32 {
-  ret 0;
+main: () {
+  e: Entity = 0;
 }

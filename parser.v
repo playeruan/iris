@@ -367,6 +367,9 @@ fn (mut p Parser) parse_stmt() Stmt {
         mut def_val := ?Expr(none)
 
         if p.peek().kind == .o_eq {
+          if t is TypeFunc {
+            p.parse_error("a member of type ${Type(t)} cannot have a default value") 
+          }
           p.advance()
           def_val = p.parse_expr(.literal)
         }

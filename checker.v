@@ -226,5 +226,5 @@ fn Checker.check_program(ast []Stmt) {
   for stmt in ast {
     c.check_stmt(stmt)
   }
-  println(c.table)
+  //println(c.table)
 }
