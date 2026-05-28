@@ -23,7 +23,7 @@ type Stmt =
   StmtDeclFunc | StmtDeclMember | StmtDeclStruct |
   StmtReturn | StmtContinue | StmtBreak |
   StmtBranch | StmtWhile | StmtFor | StmtAssign |
-  StmtDeclEnum
+  StmtDeclEnum | StmtDeclEnumMember
 
 struct StmtExpr {
   expr Expr
@@ -69,7 +69,7 @@ struct StmtDeclEnumMember {
 
 struct StmtDeclEnum {
   sym Symbol
-  members []StmtDeclMember
+  members []StmtDeclEnumMember
   span Span
 }
 

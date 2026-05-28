@@ -112,6 +112,9 @@ fn (mut c Checker) check_expr(expr Expr) Type {
       }
     }
     ExprVar {
+      if expr.name in c.table.enums {
+        return c.table.enums[expr.name].type
+      }
       sym := c.current_scope.lookup_sym(expr.name) or {
         c.checker_error("undeclared symbol ${expr.name}")
       }
@@ -233,8 +236,20 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
                           ${vt} to ${decl_t} for member ${stmt.name}")
         }
       }
+    }
+    
+    StmtDeclEnumMember {
+      if !stmt.name.is_upper() {
+        c.checker_error("enum member names must be upper case (${stmt.name} -> ${stmt.name.to_upper()})")
+      }
 
-
+      if stmt.override_value != none {
+        vt := c.check_expr(stmt.override_value)
+        if join_types(TypePrimitive{type: .i32}, vt) == none {
+          c.checker_error("cannot implicitly cast default value of type \
+                          ${vt} to const i32 for member ${stmt.name}")
+        }
+      }
     }
 
     StmtDeclStruct {
@@ -255,9 +270,6 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
 
     StmtDeclEnum {
       for m in stmt.members {
-        if !m.name.is_upper() {
-          c.checker_error("enum members must be all uppercase (${m.name} -> ${m.name.to_upper()}) ")
-        }
         c.check_stmt(m)
       }
 

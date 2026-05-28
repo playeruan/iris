@@ -367,7 +367,7 @@ fn (mut p Parser) parse_stmt() Stmt {
       t_name := p.expect(.identifier)
       p.expect(.lbrace)
 
-      mut member_decls := []StmtDeclMember{}
+      mut member_decls := []StmtDeclEnumMember{}
       mut mem_syms := []SymbolVar{}
       
       for p.peek().kind != .rbrace {
@@ -383,10 +383,10 @@ fn (mut p Parser) parse_stmt() Stmt {
           p.expect(.comma)
         }
 
-        member_decls << StmtDeclMember{
+        member_decls << StmtDeclEnumMember{
           name: n 
           type: TypePrimitive{type: .i32} 
-          default_value: def_val
+          override_value: def_val
           span: p.span
         }
         mem_syms << SymbolVar{
