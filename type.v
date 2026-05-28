@@ -77,7 +77,7 @@ fn (t Type) str() string {
        t.type.str()
     }
     TypeStruct {
-      t.name
+      "struct ${t.name}"
     }
     TypeFunc {
       mut s := "("
@@ -147,6 +147,7 @@ fn are_types_equal(a Type, b Type) bool {
 }
 
 fn join_types(a Type, b Type) ?Type {
+  // TODO: cannot join non-const to const ?
   if are_types_equal(a, b) { return a.unqual() }
 
   ua := a.unqual()

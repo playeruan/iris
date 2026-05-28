@@ -67,24 +67,67 @@ fn (mut c Checker) register_sym(s Symbol) {
 
 fn (mut c Checker) check_expr(expr Expr) Type {
   return match expr {
+    ExprType {expr.type}
     ExprLiteralPrimitive {expr.type}
     ExprLiteralArray {expr.of_type}
-    ExprLiteralStruct {c.checker_error("unimplemented check_expr() for ExprLiteralStruct")}
     ExprGroup {c.check_expr(expr.inner)}
+    ExprLiteralStruct {
+      if expr.type.name !in c.table.structs {
+        c.checker_error("cannot create instance of undeclared type ${Type(expr.type)}")
+      }
+      sym := c.table.structs[expr.type.name]
+      if expr.argv.len != sym.member_syms.len {
+        c.checker_error("type ${Type(expr.type)} requires ${sym.member_syms.len} arguments, got ${expr.argv.len}")
+      } 
+      for i := 0; i < expr.argv.len; i++ {
+        req_t := sym.member_syms[i].type
+        t := c.check_expr(expr.argv[i])
+        if join_types(t, req_t) == none {
+        c.checker_error("cannot implicitly cast value of type ${t} \
+                          to ${req_t} for argument ${i+1}")
+        }
+      }
+      expr.type
+    }
     ExprCall {
       callee_typ := c.check_expr(expr.callee)
       if callee_typ is TypeFunc {
         if expr.argv.len != callee_typ.arg_types.len {
           c.checker_error("function requires ${callee_typ.arg_types.len} args, got ${expr.argv.len}")
         }
+        sym := c.table.root_scope.lookup_sym(expr.callee.name) or {
+          c.checker_error("calling undeclared function ${expr.callee.name}")
+        }
         for i := 0; i < expr.argv.len; i++ {
-          _ := c.check_expr(expr.argv[i])
-          // TODO: types must match
+          t := c.check_expr(expr.argv[i])
+          req_t := sym.arg_syms[i].type
+          if join_types(t, req_t) == none {
+          c.checker_error("cannot implicitly cast value of type ${t} \
+                          to ${req_t} for argument ${i+1}")
+          }
         }
         callee_typ.ret
       } else {
         c.checker_error("tried to call an expression of type ${callee_typ}")
       }
+    }
+    ExprVar {
+      sym := c.current_scope.lookup_sym(expr.name) or {
+        c.checker_error("undeclared symbol ${expr.name}")
+      }
+      sym.type
+    }
+    ExprUnary {
+      // TODO: check op is valid
+      c.check_expr(expr.operand)
+    }
+    ExprBinary {
+      lt := c.check_expr(expr.left)
+      rt := c.check_expr(expr.right)
+      if join_types(lt, rt) == none {
+        c.checker_error("cannot implicitly cast between types ${lt} and ${rt}")
+      }
+      lt
     }
     else {c.checker_error("unimplemented check_expr() for ${expr}")}
   }
@@ -113,9 +156,13 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
         c.checker_error("cannot declare variable ${stmt.sym.name} of type void")
       }
       
-      c.check_expr(stmt.value)
+      vt := c.check_expr(stmt.value)
 
-      // TODO: check value type matches
+      if join_types(decl_t, vt) == none {
+        c.checker_error("cannot implicitly cast value of type ${vt} \
+                          to ${decl_t} for variable ${stmt.sym.name}")
+      }
+
       c.register_sym(stmt.sym)
     }
 
@@ -146,6 +193,8 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
       }
 
       c.pop_scope()
+
+      c.register_sym(stmt.sym)
     }
 
     StmtDeclMember {
@@ -160,7 +209,8 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
       if stmt.default_value != none {
         vt := c.check_expr(stmt.default_value)
         if join_types(decl_t, vt) == none {
-          c.checker_error("cannot implicitly cast default value of type ${vt} to ${decl_t} for member ${stmt.name}")
+          c.checker_error("cannot implicitly cast default value of type \
+                          ${vt} to ${decl_t} for member ${stmt.name}")
         }
       }
 
@@ -180,6 +230,7 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
         c.check_stmt(m)
       }
 
+      c.table.structs[stmt.sym.name] = stmt.sym as SymbolStruct
     }
     
     StmtBlock {
@@ -209,7 +260,7 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
     StmtReturn {
       expr_t := c.check_expr(stmt.expr)
       if c.current_ret_type != none {
-        if c.current_ret_type != expr_t { //TODO: allow for coercion
+        if join_types(c.current_ret_type, expr_t) == none { 
           c.checker_error("expected return of type ${c.current_ret_type} but got ${expr_t}")
         }
       } else {

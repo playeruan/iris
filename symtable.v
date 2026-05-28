@@ -15,12 +15,14 @@ struct SymbolFunc {
   qualifs []DeclQualifier
   name string
   type Type
+  arg_syms []SymbolVar
 }
 
 struct SymbolStruct {
   qualifs []DeclQualifier
   name string
   type Type
+  member_syms []SymbolVar
 }
 
 // -- Scope

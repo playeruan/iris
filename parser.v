@@ -106,17 +106,17 @@ fn (mut p Parser) parse_primary() Expr {
       } 
     }
     .identifier {
-      /*if p.peek().kind == .lbrace {
+      if t.text.starts_with_capital() && p.peek().kind == .lparen {
         // Struct instanciation
-        p.expect(.lbrace)
+        p.expect(.lparen)
         mut argv := []Expr{}
-        for p.peek().kind != .rbrace {
+        for p.peek().kind != .rparen {
           argv << p.parse_expr(.literal)
-            if p.peek().kind != .rbrace {
+            if p.peek().kind != .rparen {
               p.expect(.comma)
             }
         }
-        p.expect(.rbrace)
+        p.expect(.rparen)
         ExprLiteralStruct{
           type: TypeStruct {
             qualifs: [.const]
@@ -124,9 +124,9 @@ fn (mut p Parser) parse_primary() Expr {
           }
           argv: argv
         }
-      } else {*/
+      } else {
         ExprVar{name: t.text}
-      //}
+      }
     }
     .lparen {
       e := ExprGroup{inner: p.parse_expr(.literal)}
@@ -243,10 +243,18 @@ fn (mut p Parser) parse_decl(var_expr ExprVar) Stmt {
 
     if typ is TypeFunc {
       b := p.parse_block()
+      mut arg_symbols := []SymbolVar{}
+      for i := 0; i < typ.arg_names.len; i++ {
+        arg_symbols << SymbolVar{
+          name: typ.arg_names[i]
+          type: typ.arg_types[i]
+        }
+      }
       return StmtDeclFunc {
         sym: SymbolFunc {
         name: var_expr.name 
         type: typ
+        arg_syms: arg_symbols
       }
       block: b 
       span: p.span
@@ -359,6 +367,7 @@ fn (mut p Parser) parse_stmt() Stmt {
       p.expect(.lbrace)
 
       mut member_decls := []StmtDeclMember{}
+      mut mem_syms := []SymbolVar{}
       
       for p.peek().kind != .rbrace {
         n := p.expect(.identifier).text 
@@ -381,9 +390,15 @@ fn (mut p Parser) parse_stmt() Stmt {
           default_value: def_val
           span: p.span
         }
+        mem_syms << SymbolVar{
+          qualifs: [] //TODO: handle qualifs for members
+          name: n 
+          type: t 
+        }
       }
       
       p.expect(.rbrace)
+
 
       StmtDeclStruct{
         sym: SymbolStruct{
@@ -391,6 +406,7 @@ fn (mut p Parser) parse_stmt() Stmt {
           type: TypeStruct {
             name: t_name.text
           }
+          member_syms: mem_syms
         } 
         members: member_decls
         span: p.span
