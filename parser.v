@@ -362,6 +362,51 @@ fn (mut p Parser) parse_stmt() Stmt {
       p.expect(.semicolon)
       b
     }
+    .enum {
+      p.advance()
+      t_name := p.expect(.identifier)
+      p.expect(.lbrace)
+
+      mut member_decls := []StmtDeclMember{}
+      mut mem_syms := []SymbolVar{}
+      
+      for p.peek().kind != .rbrace {
+        n := p.expect(.identifier).text 
+        mut def_val := ?Expr(none)
+
+        if p.peek().kind == .o_eq {
+          p.advance()
+          def_val = p.parse_expr(.literal)
+        }
+
+        p.expect(.semicolon)
+        member_decls << StmtDeclMember{
+          name: n 
+          type: TypePrimitive{type: .i32} 
+          default_value: def_val
+          span: p.span
+        }
+        mem_syms << SymbolVar{
+          qualifs: [] //TODO: handle qualifs for members
+          name: n 
+          type: TypePrimitive{type: .i32} 
+        }
+      }
+      
+      p.expect(.rbrace)
+
+
+      StmtDeclEnum{
+        sym: SymbolEnum{
+          name: t_name.text
+          type: TypePrimitive{type: .i32} // TODO: make TypeEnum
+          member_syms: mem_syms
+        } 
+        members: member_decls
+        span: p.span
+      }
+
+    }
     .struct {
       p.advance() 
       t_name := p.expect(.identifier)

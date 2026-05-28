@@ -1,4 +1,9 @@
 
+enum MyEnum {
+  test = 2;
+  test4;
+}
+
 main: () {
   x: i32 = 0;
   ++x;

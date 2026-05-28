@@ -3,7 +3,7 @@ module main
 
 // -- Symbol
 
-type Symbol = SymbolVar | SymbolFunc | SymbolStruct
+type Symbol = SymbolVar | SymbolFunc | SymbolStruct | SymbolEnum
 
 struct SymbolVar {
   qualifs []DeclQualifier
@@ -20,6 +20,12 @@ struct SymbolFunc {
 
 struct SymbolStruct {
   qualifs []DeclQualifier
+  name string
+  type Type
+  member_syms []SymbolVar
+}
+
+struct SymbolEnum {
   name string
   type Type
   member_syms []SymbolVar

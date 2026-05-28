@@ -238,6 +238,10 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
 
       c.table.structs[stmt.sym.name] = stmt.sym as SymbolStruct
     }
+
+    StmtDeclEnum {
+
+    }
     
     StmtBlock {
       c.check_stmt_block(stmt) 

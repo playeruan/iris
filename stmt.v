@@ -22,7 +22,8 @@ type Stmt =
   StmtExpr | StmtBlock | StmtDeclVar |
   StmtDeclFunc | StmtDeclMember | StmtDeclStruct |
   StmtReturn | StmtContinue | StmtBreak |
-  StmtBranch | StmtWhile | StmtFor | StmtAssign
+  StmtBranch | StmtWhile | StmtFor | StmtAssign |
+  StmtDeclEnum
 
 struct StmtExpr {
   expr Expr
@@ -54,6 +55,12 @@ struct StmtDeclMember {
 }
 
 struct StmtDeclStruct {
+  sym Symbol
+  members []StmtDeclMember
+  span Span
+}
+
+struct StmtDeclEnum {
   sym Symbol
   members []StmtDeclMember
   span Span
