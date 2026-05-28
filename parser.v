@@ -379,7 +379,10 @@ fn (mut p Parser) parse_stmt() Stmt {
           def_val = p.parse_expr(.literal)
         }
 
-        p.expect(.semicolon)
+        if p.peek().kind == .comma {
+          p.expect(.comma)
+        }
+
         member_decls << StmtDeclMember{
           name: n 
           type: TypePrimitive{type: .i32} 

@@ -14,8 +14,8 @@ type Expr =
   ExprVar | ExprLiteralPrimitive | ExprGroup |
   ExprCall | ExprIndex | ExprAccess |
   ExprType | ExprCast | ExprLiteralStruct | 
-  ExprLiteralArray | ExprRef | ExprDeref | 
-  ExprBinary | ExprUnary
+  ExprLiteralArray | ExprRef | ExprDeref |
+  ExprBinary | ExprUnary | ExprEnumAccess
 
 struct ExprVar {
   name string
@@ -81,4 +81,9 @@ struct ExprBinary {
 struct ExprUnary {
   op string
   operand Expr
+}
+
+struct ExprEnumAccess {
+  enum Expr
+  member string
 }

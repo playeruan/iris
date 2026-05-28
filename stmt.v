@@ -60,6 +60,13 @@ struct StmtDeclStruct {
   span Span
 }
 
+struct StmtDeclEnumMember {
+  name string
+  type Type
+  override_value ?Expr
+  span Span
+}
+
 struct StmtDeclEnum {
   sym Symbol
   members []StmtDeclMember

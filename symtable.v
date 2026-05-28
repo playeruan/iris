@@ -45,6 +45,7 @@ struct SymbolTable {
   mut:
   root_scope &Scope = &Scope{}
   structs map[string]SymbolStruct
+  enums   map[string]SymbolEnum
 }
 
 fn (s Scope) lookup_sym(name string) ?Symbol {

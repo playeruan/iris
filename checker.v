@@ -121,13 +121,27 @@ fn (mut c Checker) check_expr(expr Expr) Type {
       // TODO: check op is valid
       c.check_expr(expr.operand)
     }
-    ExprBinary {
+    ExprBinary {  
       lt := c.check_expr(expr.left)
       rt := c.check_expr(expr.right)
       if join_types(lt, rt) == none {
         c.checker_error("cannot implicitly cast between types ${lt} and ${rt}")
       }
       lt
+    }
+    ExprAccess {
+      lt := c.check_expr(expr.accessee)
+      rt := c.check_expr(expr.member)
+
+      if lt is TypeEnum {
+        if lt.name !in c.table.enums {
+          c.checker_error("undeclared type ${Type(lt)}")
+        }
+        sym := c.table.enums[lt.name]
+        // TODO: check that enum member exists
+      }
+
+      TypePrimitive{type: .i32}
     }
     else {c.checker_error("unimplemented check_expr() for ${expr}")}
   }
@@ -240,7 +254,14 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
     }
 
     StmtDeclEnum {
+      for m in stmt.members {
+        if !m.name.is_upper() {
+          c.checker_error("enum members must be all uppercase (${m.name} -> ${m.name.to_upper()}) ")
+        }
+        c.check_stmt(m)
+      }
 
+      c.table.enums[stmt.sym.name] = stmt.sym as SymbolEnum
     }
     
     StmtBlock {

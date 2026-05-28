@@ -41,7 +41,7 @@ fn BuiltinType.from_tok_kind(t TokKind) BuiltinType {
 
 type Type = 
   TypePrimitive | TypeFunc | TypePointer | 
-  TypeArray | TypeStruct
+  TypeArray | TypeStruct | TypeEnum
 
 struct TypePrimitive {
   qualifs []TypeQualifier
@@ -71,6 +71,11 @@ struct TypeStruct {
   name string 
 }
 
+struct TypeEnum {
+  qualifs []TypeQualifier
+  name string
+}
+
 fn (t Type) str() string {
   mut type_str := t.qualifs.str()
   type_str += match t {
@@ -80,6 +85,9 @@ fn (t Type) str() string {
     TypeStruct {
       "struct ${t.name}"
     }
+    TypeEnum{ 
+      "enum ${t.name}"
+    } 
     TypeFunc {
       mut s := "("
       assert(t.arg_names.len == 0 || t.arg_types.len == t.arg_names.len)
@@ -127,6 +135,7 @@ fn (t Type) unqual() Type {
     TypePointer {TypePointer{qualifs: [], inner: t.inner}}
     TypeArray {TypeArray{qualifs: [], inner: t.inner}}
     TypeStruct {TypeStruct{qualifs: [], name: t.name}}
+    TypeEnum {TypeEnum{qualifs: [], name: t.name}}
   }
 }
 
@@ -156,6 +165,9 @@ fn are_types_equal(a Type, b Type) bool {
     }
     TypeStruct {
       ub is TypeStruct && ua.name == ub.name
+    }
+    TypeEnum {
+      ub is TypeEnum && ua.name == ub.name
     }
   }
 }
