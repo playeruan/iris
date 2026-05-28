@@ -1,17 +1,14 @@
-@import std
 
-foo: (x: i32) -> (i32) -> f32 {
-  cl: (a: i32) [x] -> f32 {
-    ret 2x * a;
+foo: (x: i32) -> (y: i32) -> i32 {
+  cl: (a: i32) [x] -> i32 {
+    ret 2 * x * a;
   }
   ret cl;
 }
 
 main: () -> void {
   x: const i32 = 2;
-  cl: (i32) -> f32 = foo(x);
-
-  std.println(cl(3));
+  cl: (y: i32) -> i32 = foo(x);
 
   ret 0;
 }

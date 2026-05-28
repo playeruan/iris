@@ -52,6 +52,7 @@ struct TypeFunc {
   qualifs []TypeQualifier
   arg_types []Type
   arg_names []string
+  captured_names []string
   ret Type
 }
 
@@ -90,10 +91,23 @@ fn (t Type) str() string {
 					s += ", "
 				}
 			}
+
       if t.arg_names.len == 0 {
         s += "void"
       }
-			s += ") -> ${t.ret}"
+			s += ")"
+
+      s += "["
+
+      for capt_n in t.captured_names {
+				s += capt_n
+				if capt_n != t.captured_names[t.captured_names.len-1] {
+					s += ", "
+				}
+			}
+
+      s += "] -> ${t.ret}"
+
 			s
     }
     TypePointer {

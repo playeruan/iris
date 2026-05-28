@@ -239,32 +239,33 @@ fn (mut p Parser) parse_stmt_expr() Stmt {
 
 fn (mut p Parser) parse_decl(var_expr ExprVar) Stmt {
   p.expect(.colon)
-    typ := p.parse_type()
+  typ := p.parse_type()
 
-    if typ is TypeFunc {
-      b := p.parse_block()
-      mut arg_symbols := []SymbolVar{}
-      for i := 0; i < typ.arg_names.len; i++ {
-        arg_symbols << SymbolVar{
-          name: typ.arg_names[i]
-          type: typ.arg_types[i]
-        }
+  if typ is TypeFunc && p.peek().kind == .lbrace {
+
+    b := p.parse_block()
+    mut arg_symbols := []SymbolVar{}
+    for i := 0; i < typ.arg_names.len; i++ {
+      arg_symbols << SymbolVar{
+        name: typ.arg_names[i]
+        type: typ.arg_types[i]
       }
-      return StmtDeclFunc {
-        sym: SymbolFunc {
+    }
+    return StmtDeclFunc {
+      sym: SymbolFunc {
         name: var_expr.name 
         type: typ
         arg_syms: arg_symbols
       }
       block: b 
       span: p.span
-      }
-    } else {
-      p.expect(.o_eq)
-      val := p.parse_expr(.literal)
-      p.expect(.semicolon)
-      return StmtDeclVar {
-        sym: SymbolVar {
+    }
+  } else {
+    p.expect(.o_eq)
+    val := p.parse_expr(.literal)
+    p.expect(.semicolon)
+    return StmtDeclVar {
+      sym: SymbolVar {
         name: var_expr.name
         type: typ
       }    
@@ -476,6 +477,22 @@ fn (mut p Parser) parse_func_type(qualifs []TypeQualifier) TypeFunc {
   }
 
   p.expect(.rparen)
+
+  mut captured_names := []string{}
+
+  if p.peek().kind == .lsquare {
+    p.expect(.lsquare)
+    for p.peek().kind != .rsquare {
+      captured_names << p.advance().text
+
+      if p.peek().kind != .rsquare {
+        p.expect(.comma)
+      }
+    }
+
+    p.expect(.rsquare)
+  }
+
   mut ret := Type(TypePrimitive{type: .void})
 
   if p.peek().kind == .arrow {
@@ -487,6 +504,7 @@ fn (mut p Parser) parse_func_type(qualifs []TypeQualifier) TypeFunc {
     qualifs: qualifs
     arg_types: arg_types
     arg_names: arg_names
+    captured_names: captured_names
     ret: ret
   }
 }

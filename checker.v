@@ -181,6 +181,12 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
         c.register_sym(SymbolVar{name: n, type: t})
       }
 
+      for n in stmt.sym.type.captured_names {
+        if c.current_scope.lookup_sym(n) == none {
+          c.checker_error("cannot capture undeclared symbol ${n}")
+        }
+      }
+
       c.check_stmt_block(stmt.block)
 
       mut returns := false 
@@ -269,7 +275,7 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
     }
 
     StmtAssign {
-      // TODO: check symbol exists
+      c.check_expr(stmt.assignee)
       _ := c.check_expr(stmt.val)
       // TODO: check types are coercible right to left
 
