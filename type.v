@@ -74,6 +74,7 @@ struct TypeStruct {
 struct TypeEnum {
   qualifs []TypeQualifier
   name string
+  as Type
 }
 
 fn (t Type) str() string {
@@ -86,7 +87,7 @@ fn (t Type) str() string {
       "struct ${t.name}"
     }
     TypeEnum{ 
-      "enum ${t.name}"
+      "enum ${t.name} as ${t.as}"
     } 
     TypeFunc {
       mut s := "("

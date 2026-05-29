@@ -134,17 +134,33 @@ fn (mut c Checker) check_expr(expr Expr) Type {
     }
     ExprAccess {
       lt := c.check_expr(expr.accessee)
+      if lt !is TypeStruct {
+        c.checker_error("cannot access from non-struct type")
+      }
       rt := c.check_expr(expr.member)
+      rt
+    }
+    ExprEnumAccess {
+      lt := c.check_expr(expr.enum)
 
       if lt is TypeEnum {
         if lt.name !in c.table.enums {
           c.checker_error("undeclared type ${Type(lt)}")
         }
         sym := c.table.enums[lt.name]
-        // TODO: check that enum member exists
+        mut exists := false
+        for mem_s in sym.member_syms {
+          if expr.member == mem_s.name {
+            exists = true
+          }
+        }
+        if !exists {
+          c.checker_error("undeclared enum member ${expr.member} for ${lt}")
+        }
+        lt
+      } else {
+        c.checker_error("cannot use # access operator on non-enum type")   
       }
-
-      TypePrimitive{type: .i32}
     }
     else {c.checker_error("unimplemented check_expr() for ${expr}")}
   }

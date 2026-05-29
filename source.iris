@@ -1,9 +1,9 @@
 
 enum EntityKind {
-  PLAYER = -1,
+  PLAYER,
   ENEMY
 }
 
 main: () {
-  x: EntityKind = EntityKind.PLAYER;
+  x: EntityKind = EntityKind#PLAYER;
 }

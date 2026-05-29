@@ -193,6 +193,10 @@ fn (mut p Parser) parse_expr(pr Precedence) Expr {
         ident := p.expect(.identifier)
         ExprAccess{accessee: expr, member: ExprVar{name: ident.text}}
       }
+      .o_hash {
+        ident := p.expect(.identifier)
+        ExprEnumAccess{enum: expr, member: ident.text}
+      }
       .at {
         t := p.parse_type()
         ExprCast{castee: expr, type: t}
@@ -402,7 +406,7 @@ fn (mut p Parser) parse_stmt() Stmt {
       StmtDeclEnum{
         sym: SymbolEnum{
           name: t_name.text
-          type: TypePrimitive{type: .i32} // TODO: make TypeEnum
+          type: TypeEnum{name: t_name.text, as: TypePrimitive{type: .i32}} 
           member_syms: mem_syms
         } 
         members: member_decls
@@ -501,6 +505,7 @@ fn (mut p Parser) parse_type() Type {
       type: BuiltinType.from_tok_kind(tok_name.kind)
     }
   } else {
+    // TODO: distinguish enums
     tok_name := p.advance()
     return TypeStruct {
       qualifs: qualifs

@@ -62,6 +62,7 @@ enum TokKind as u8 {
   o_caret
   o_plusplus
   o_minusminus
+  o_hash
 
   dot
   comma
@@ -100,7 +101,7 @@ fn (k TokKind) precedence() Precedence {
     .o_star, .o_slash, .o_and, .o_or {.multiplication}
     // {bitshift}
     .o_exclam, .o_tilde, .o_plusplus, .o_minusminus {.prefix}
-    .dot, .lsquare, .lparen, .at {.postfix}
+    .dot, .lsquare, .lparen, .at, .o_hash {.postfix}
     else {.literal}
   }
 }
@@ -156,6 +157,7 @@ fn Token.from_str(s string) ?TokKind {
     "^"     {.o_caret}
     "++"    {.o_plusplus}
     "--"    {.o_minusminus}
+    "#"     {.o_hash}
 
     "."     {.dot}
     ","     {.comma}
