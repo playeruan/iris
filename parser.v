@@ -65,7 +65,7 @@ fn (mut p Parser) parse_type_qualifs() []TypeQualifier {
 fn (mut p Parser) parse_primary() Expr {
   t := p.peek()
   if t.kind.is_type_qualifier() || t.kind.is_primitive_type() {
-    p.parse_type()
+    return ExprType{type: p.parse_type()}
   }
   p.advance()
   return match t.kind {

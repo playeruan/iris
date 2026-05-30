@@ -69,7 +69,7 @@ fn (mut c Checker) check_expr(expr Expr) Type {
   return match expr {
     ExprType {expr.type}
     ExprLiteralPrimitive {expr.type}
-    ExprLiteralArray {expr.of_type}
+    ExprLiteralArray { if expr.argv.len > 0 {c.check_expr(expr.argv[0])} else {TypePrimitive{type: .void}} }
     ExprGroup {c.check_expr(expr.inner)}
     ExprLiteralStruct {
       if expr.type.name !in c.table.structs {
@@ -134,11 +134,17 @@ fn (mut c Checker) check_expr(expr Expr) Type {
     }
     ExprAccess {
       lt := c.check_expr(expr.accessee)
-      if lt !is TypeStruct {
+      if lt is TypeStruct {
+        if lt.name !in c.table.structs {
+          c.checker_error("undeclared type ${Type(lt)}")
+        }
+        sym := c.table.struct[lt.name]
+      } else {
         c.checker_error("cannot access from non-struct type")
       }
-      rt := c.check_expr(expr.member)
-      rt
+      //rt := c.check_expr(expr.member)
+      TypePrimitive{type: .void}
+      // TODO: actually check ^^
     }
     ExprEnumAccess {
       lt := c.check_expr(expr.enum)
@@ -297,7 +303,7 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
     }
 
     StmtBranch {
-      if c.check_expr(stmt.if_guard) != Type(TypePrimitive{qualifs: [.const], type: .bool}) {
+      if join_types(c.check_expr(stmt.if_guard), Type(TypePrimitive{type: .bool})) == none {
         c.checker_error("if and elif guards must be of type bool")
       }
 

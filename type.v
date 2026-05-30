@@ -136,7 +136,7 @@ fn (t Type) unqual() Type {
     TypePointer {TypePointer{qualifs: [], inner: t.inner}}
     TypeArray {TypeArray{qualifs: [], inner: t.inner}}
     TypeStruct {TypeStruct{qualifs: [], name: t.name}}
-    TypeEnum {TypeEnum{qualifs: [], name: t.name}}
+    TypeEnum {TypeEnum{qualifs: [], name: t.name, as: t.as}}
   }
 }
 
