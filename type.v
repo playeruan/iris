@@ -41,7 +41,8 @@ fn BuiltinType.from_tok_kind(t TokKind) BuiltinType {
 
 type Type = 
   TypePrimitive | TypeFunc | TypePointer | 
-  TypeArray | TypeStruct | TypeEnum
+  TypeArray | TypeStruct | TypeEnum |
+  TypeUnresolved
 
 struct TypePrimitive {
   qualifs []TypeQualifier
@@ -77,6 +78,14 @@ struct TypeEnum {
   as Type
 }
 
+// for things that clearly should be 
+// types but we're unsure of which
+// kind
+struct TypeUnresolved {
+  qualifs []TypeQualifier
+  name string
+}
+
 fn (t Type) str() string {
   mut type_str := t.qualifs.str()
   type_str += match t {
@@ -87,7 +96,7 @@ fn (t Type) str() string {
       "struct ${t.name}"
     }
     TypeEnum{ 
-      "enum ${t.name} as ${t.as}"
+      "enum ${t.name} (${t.as})"
     } 
     TypeFunc {
       mut s := "("
@@ -125,6 +134,9 @@ fn (t Type) str() string {
     TypeArray {
       "Array <${t.inner.str()}>"
     }
+    TypeUnresolved {
+      "unresolved ${t.name}"
+    }
   }
   return type_str
 }
@@ -137,6 +149,7 @@ fn (t Type) unqual() Type {
     TypeArray {TypeArray{qualifs: [], inner: t.inner}}
     TypeStruct {TypeStruct{qualifs: [], name: t.name}}
     TypeEnum {TypeEnum{qualifs: [], name: t.name, as: t.as}}
+    TypeUnresolved{TypeUnresolved{qualifs: [], name: t.name}}
   }
 }
 
@@ -169,6 +182,9 @@ fn are_types_equal(a Type, b Type) bool {
     }
     TypeEnum {
       ub is TypeEnum && ua.name == ub.name
+    }
+    TypeUnresolved {
+      false // unresolved type cannot be equal
     }
   }
 }

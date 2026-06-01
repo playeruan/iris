@@ -1,9 +1,8 @@
 
-enum EntityKind {
-  PLAYER,
-  ENEMY
-}
+enum E { FIRST, }
+struct S { a: i32; }
 
-main: () {
-  x: EntityKind = EntityKind#PLAYER;
+
+foo: (x: ^S) { 
+  y: i32 = (^x).a;
 }

@@ -193,10 +193,6 @@ fn (mut p Parser) parse_expr(pr Precedence) Expr {
         ident := p.expect(.identifier)
         ExprAccess{accessee: expr, member: ExprVar{name: ident.text}}
       }
-      .o_hash {
-        ident := p.expect(.identifier)
-        ExprEnumAccess{enum: expr, member: ident.text}
-      }
       .at {
         t := p.parse_type()
         ExprCast{castee: expr, type: t}
@@ -248,7 +244,7 @@ fn (mut p Parser) parse_decl(var_expr ExprVar) Stmt {
   if typ is TypeFunc && p.peek().kind == .lbrace {
 
     b := p.parse_block()
-    mut arg_symbols := []SymbolVar{}
+    mut arg_symbols := []Symbol{}
     for i := 0; i < typ.arg_names.len; i++ {
       arg_symbols << SymbolVar{
         name: typ.arg_names[i]
@@ -340,7 +336,6 @@ fn (mut p Parser) parse_stmt() Stmt {
   return match p.peek().kind {
     .ret {
       p.advance()
-      dump(p.peek())
       r := StmtReturn{
         expr: 
           if p.peek().kind == .semicolon {
@@ -372,7 +367,7 @@ fn (mut p Parser) parse_stmt() Stmt {
       p.expect(.lbrace)
 
       mut member_decls := []StmtDeclEnumMember{}
-      mut mem_syms := []SymbolVar{}
+      mut mem_syms := []Symbol{}
       
       for p.peek().kind != .rbrace {
         n := p.expect(.identifier).text 
@@ -420,7 +415,7 @@ fn (mut p Parser) parse_stmt() Stmt {
       p.expect(.lbrace)
 
       mut member_decls := []StmtDeclMember{}
-      mut mem_syms := []SymbolVar{}
+      mut mem_syms := []Symbol{}
       
       for p.peek().kind != .rbrace {
         n := p.expect(.identifier).text 
@@ -505,9 +500,9 @@ fn (mut p Parser) parse_type() Type {
       type: BuiltinType.from_tok_kind(tok_name.kind)
     }
   } else {
-    // TODO: distinguish enums
     tok_name := p.advance()
-    return TypeStruct {
+    // may be struct or enum
+    return TypeUnresolved {
       qualifs: qualifs
       name: tok_name.text
     }

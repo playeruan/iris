@@ -60,15 +60,86 @@ fn (mut c Checker) register_sym(s Symbol) {
   if s.name in c.current_scope.syms {
     c.checker_error("redefinition of symbol ${s.name}")
   }
-  c.current_scope.syms[s.name] = s
+  c.current_scope.syms[s.name] = c.resolve_sym_types(s)
+}
+
+fn (mut c Checker) resolve_type(t Type) Type {
+  if t is TypeUnresolved {
+    if t.name in c.table.enums {
+      sym := c.table.enums[t.name]
+      return TypeEnum{qualifs: t.qualifs, name: t.name, as: sym.type.as} 
+    }
+    if t.name in c.table.structs {
+      return TypeStruct{qualifs: t.qualifs, name: t.name} 
+    }
+    c.checker_error("type ${Type(t)} could not be resolved")
+  }
+  if t is TypeArray {
+    return TypeArray {
+      qualifs: t.qualifs
+      inner: c.resolve_type(t.inner)
+    }
+  }
+  if t is TypePointer {
+    return TypePointer {
+      qualifs: t.qualifs
+      inner: c.resolve_type(t.inner)
+    }
+  }
+  if t is TypeFunc {
+    return TypeFunc {
+      qualifs: t.qualifs 
+      arg_types: t.arg_types.map(c.resolve_type(it))
+      arg_names: t.arg_names
+      captured_names: t.captured_names 
+      ret: c.resolve_type(t.ret)
+    }
+  }
+  return t
+}
+
+fn (mut c Checker) resolve_sym_types(s Symbol) Symbol {
+  return match s {
+    SymbolVar {
+      SymbolVar {
+        qualifs: s.qualifs
+        name: s.name
+        type: c.resolve_type(s.type)
+      }
+    }
+    SymbolFunc {
+      SymbolFunc {
+        qualifs: s.qualifs 
+        name: s.name
+        type: c.resolve_type(s.type)
+        arg_syms: s.arg_syms.map(c.resolve_sym_types(it))
+      }
+    }
+    SymbolStruct {
+      SymbolStruct {
+        qualifs: s.qualifs 
+        name: s.name
+        type: c.resolve_type(s.type)
+        member_syms: s.member_syms.map(c.resolve_sym_types(it))
+      }
+    }
+    SymbolEnum {
+      SymbolEnum {
+        qualifs: s.qualifs 
+        name: s.name
+        type: c.resolve_type(s.type)
+        member_syms: s.member_syms.map(c.resolve_sym_types(it))
+      }
+    }
+  }
 }
 
 // checking expressions
 
 fn (mut c Checker) check_expr(expr Expr) Type {
   return match expr {
-    ExprType {expr.type}
-    ExprLiteralPrimitive {expr.type}
+    ExprType {c.resolve_type(expr.type)}
+    ExprLiteralPrimitive {expr.type} // no need to resolve because it's always known here
     ExprLiteralArray { if expr.argv.len > 0 {c.check_expr(expr.argv[0])} else {TypePrimitive{type: .void}} }
     ExprGroup {c.check_expr(expr.inner)}
     ExprLiteralStruct {
@@ -138,34 +209,39 @@ fn (mut c Checker) check_expr(expr Expr) Type {
         if lt.name !in c.table.structs {
           c.checker_error("undeclared type ${Type(lt)}")
         }
-        sym := c.table.struct[lt.name]
-      } else {
-        c.checker_error("cannot access from non-struct type")
-      }
-      //rt := c.check_expr(expr.member)
-      TypePrimitive{type: .void}
-      // TODO: actually check ^^
-    }
-    ExprEnumAccess {
-      lt := c.check_expr(expr.enum)
+        sym := c.table.structs[lt.name]
+        for m in sym.member_syms {
+          if expr.member.name == m.name  {
+            return m.type
+          }
+        }
+        c.checker_error("member ${expr.member.name} doesn't exist in ${Type(lt)}")
 
-      if lt is TypeEnum {
+      } else if lt is TypeEnum {
         if lt.name !in c.table.enums {
           c.checker_error("undeclared type ${Type(lt)}")
         }
-        sym := c.table.enums[lt.name]
-        mut exists := false
-        for mem_s in sym.member_syms {
-          if expr.member == mem_s.name {
-            exists = true
-          }
-        }
-        if !exists {
-          c.checker_error("undeclared enum member ${expr.member} for ${lt}")
-        }
         lt
       } else {
-        c.checker_error("cannot use # access operator on non-enum type")   
+        c.checker_error("cannot access from type ${lt}")
+        TypePrimitive{type: .void}
+      }
+      //rt := c.check_expr(expr.member)
+    }
+    ExprIndex {
+      lt := c.check_expr(expr.indexee)
+      if lt is TypeArray {
+        lt.inner
+      } else {
+        c.checker_error("cannot index from non-array type ${lt}")
+      }
+    }
+    ExprDeref {
+      lt := c.check_expr(expr.inner)
+      if lt is TypePointer {
+        lt.inner
+      } else {
+        c.checker_error("cannot dereference non-pointer type ${lt}")
       }
     }
     else {c.checker_error("unimplemented check_expr() for ${expr}")}
@@ -190,7 +266,7 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
       if !stmt.sym.name.is_lower() {
         c.checker_error("variable names must be snake case (${stmt.sym.name} -> ${stmt.sym.name.camel_to_snake()})")
       }
-      decl_t := stmt.sym.type
+      decl_t := c.resolve_type(stmt.sym.type)
       if decl_t is TypePrimitive && decl_t.type == .void {
         c.checker_error("cannot declare variable ${stmt.sym.name} of type void")
       }
@@ -201,7 +277,6 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
         c.checker_error("cannot implicitly cast value of type ${vt} \
                           to ${decl_t} for variable ${stmt.sym.name}")
       }
-
       c.register_sym(stmt.sym)
     }
 
@@ -212,7 +287,7 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
       c.push_scope()
 
       func_t := stmt.sym.type as TypeFunc
-      c.current_ret_type = func_t.ret
+      c.current_ret_type = c.resolve_type(func_t.ret)
 
       for i := 0; i < stmt.sym.type.arg_types.len; i++ {
         n := stmt.sym.type.arg_names[i]
@@ -239,7 +314,7 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
 
       c.pop_scope()
 
-      c.register_sym(stmt.sym)
+      c.register_sym(c.resolve_sym_types(stmt.sym))
     }
 
     StmtDeclMember {
@@ -352,5 +427,5 @@ fn Checker.check_program(ast []Stmt) {
   for stmt in ast {
     c.check_stmt(stmt)
   }
-  //println(c.table)
+  println(c.table)
 }
