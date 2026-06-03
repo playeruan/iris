@@ -23,7 +23,7 @@ type Stmt =
   StmtDeclFunc | StmtDeclMember | StmtDeclStruct |
   StmtReturn | StmtContinue | StmtBreak |
   StmtBranch | StmtWhile | StmtFor | StmtAssign |
-  StmtDeclEnum | StmtDeclEnumMember
+  StmtDeclEnum | StmtDeclEnumMember | StmtInclude
 
 struct StmtExpr {
   expr Expr
@@ -112,5 +112,10 @@ struct StmtBreak {
 struct StmtAssign {
   assignee Expr
   val Expr
+  span Span
+}
+
+struct StmtInclude {
+  path string
   span Span
 }

@@ -440,6 +440,8 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
 
     StmtContinue, StmtBreak {} //TODO: check if inside while or for
 
+    StmtInclude {}
+
     else {c.checker_error("unimplemented check_stmt() for ${stmt}")}
   }
 }

@@ -90,6 +90,8 @@ enum TokKind as u8 {
   continue
   struct
   enum
+
+  include
 }
 
 fn (k TokKind) precedence() Precedence {
@@ -132,6 +134,7 @@ fn Token.from_str(s string) ?TokKind {
     "false" {.l_false}
     "struct"{.struct}
     "enum"  {.enum}
+    "include" {.include}
 
     "="     {.o_eq}
     "<"     {.o_lt}
