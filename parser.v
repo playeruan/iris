@@ -467,13 +467,12 @@ fn (mut p Parser) parse_stmt() Stmt {
       p.advance()
       path := p.expect(.l_string)
 
-      fullpath := os.join_path(path.text)
 
-      if !os.exists(fullpath) {
-        p.parse_error("imported file ${fullpath} does not exist")
+      if !os.exists(path.text) {
+        p.parse_error("imported file ${path.text} does not exist")
       }
 
-      new_toks := Lexer.lex_file(fullpath)
+      new_toks := Lexer.lex_file(path.text)
       inserted_ast := Parser.parse_program(new_toks)
       p.ast << inserted_ast 
 
