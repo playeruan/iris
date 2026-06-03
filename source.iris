@@ -1,4 +1,7 @@
-include "rand.iris"
+
+extern foo: () {
+
+}
 
 main: () {
   x: i32 = rand();

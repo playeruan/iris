@@ -80,6 +80,8 @@ enum TokKind as u8 {
 
   tq_const
 
+  dq_extern
+
   ret
   if 
   else
@@ -116,10 +118,21 @@ fn (k TokKind) is_type_qualifier() bool {
   return k.str().contains("tq_")
 }
 
+fn (k TokKind) is_decl_qualifier() bool {
+  return k.str().contains("dq_")
+}
+
 fn (k TokKind) get_type_qualifier() TypeQualifier {
   return match k {
     .tq_const {.const}
     else {panic("${k} is not a valid type qualifier")}
+  }
+}
+
+fn (k TokKind) get_decl_qualifier() DeclQualifier {
+  return match k {
+    .dq_extern {.extern}
+    else {panic("${k} is not a valid decl qualifier")}
   }
 }
 
@@ -177,6 +190,9 @@ fn Token.from_str(s string) ?TokKind {
     "}"     {.rbrace}
 
     "const" {.tq_const}
+
+    "extern" {.dq_extern}
+
     "ret"   {.ret}
     "if"    {.if}
     "else"  {.else}

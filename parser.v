@@ -208,6 +208,19 @@ fn (mut p Parser) parse_expr(pr Precedence) Expr {
 
 // parsing statements 
 
+fn (mut p Parser) parse_decl_qualifs() []DeclQualifier {
+  mut qualifs := []DeclQualifier{}
+  for p.peek().kind.is_decl_qualifier() {
+    q := p.peek().kind.get_decl_qualifier()
+    if qualifs.contains(q) {
+      p.parse_warning("qualifier ${q} already specified")
+    }
+    qualifs << q
+    p.advance()
+  }
+  return qualifs
+}
+
 fn (mut p Parser) parse_block() StmtBlock {
   p.expect(.lbrace)
   mut stmts := []Stmt{}
@@ -335,6 +348,12 @@ fn (mut p Parser) parse_branch() StmtBranch {
 }
 
 fn (mut p Parser) parse_stmt() Stmt {
+  
+  if p.peek().kind.is_decl_qualifier() {
+    qualifs := p.parse_decl_qualifs()
+    panic("unimplemented decl qualifs") 
+  }
+
   return match p.peek().kind {
     .ret {
       p.advance()
