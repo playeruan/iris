@@ -221,5 +221,13 @@ fn cast_types(from Type, to Type) ?Type {
     return none // TODO: handle
   }
 
+  if uf is TypeEnum && ut == uf.as {
+    return ut
+  }
+  
+  if ut is TypeEnum && uf == ut.as {
+    return uf
+  }
+
   return none
 }

@@ -1,8 +1,14 @@
 
-enum E { FIRST, }
-struct S { a: i32; }
+enum EntityKind {
+  PLAYER,
+  ENEMY,
+}
 
+struct Entity {
+  kind: EntityKind;
+}
 
-foo: (x: ^S) { 
-  y: i32 = (^x).a;
+main: () {
+  player: Entity = Entity(0@EntityKind);
+  pk: EntityKind = player.kind;
 }

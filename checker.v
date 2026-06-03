@@ -244,6 +244,13 @@ fn (mut c Checker) check_expr(expr Expr) Type {
         c.checker_error("cannot dereference non-pointer type ${lt}")
       }
     }
+    ExprCast {
+      what := c.check_expr(expr.castee)
+      if cast_types(what, c.resolve_type(expr.type)) == none {
+        c.checker_error("cannot cast ${what} to ${expr.type}")
+      }
+      c.resolve_type(expr.type)
+    }
     else {c.checker_error("unimplemented check_expr() for ${expr}")}
   }
 }
@@ -362,7 +369,7 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
         c.check_stmt(m)
       }
 
-      c.table.structs[stmt.sym.name] = stmt.sym as SymbolStruct
+      c.table.structs[stmt.sym.name] = c.resolve_sym_types(stmt.sym) as SymbolStruct
     }
 
     StmtDeclEnum {
