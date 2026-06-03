@@ -3,7 +3,6 @@ module main
 
 // -- Parser
 import os 
-import strings
 
 struct Parser {
   mut: 
@@ -57,8 +56,9 @@ fn (mut p Parser) parse_type_qualifs() []TypeQualifier {
     q := p.peek().kind.get_type_qualifier()
     if qualifs.contains(q) {
       p.parse_warning("qualifier ${q} already specified")
+    } else {
+      qualifs << q
     }
-    qualifs << q
     p.advance()
   }
   return qualifs
@@ -214,8 +214,9 @@ fn (mut p Parser) parse_decl_qualifs() []DeclQualifier {
     q := p.peek().kind.get_decl_qualifier()
     if qualifs.contains(q) {
       p.parse_warning("qualifier ${q} already specified")
+    } else {
+      qualifs << q
     }
-    qualifs << q
     p.advance()
   }
   return qualifs
@@ -238,7 +239,7 @@ fn (mut p Parser) parse_stmt_expr() Stmt {
   expr := p.parse_expr(.literal) 
 
   if expr is ExprVar && p.peek().kind == .colon {
-    return p.parse_decl(expr) 
+    return p.parse_decl(expr, []) 
   }
 
   if p.peek().kind == .o_eq {
@@ -252,13 +253,20 @@ fn (mut p Parser) parse_stmt_expr() Stmt {
   }
 }
 
-fn (mut p Parser) parse_decl(var_expr ExprVar) Stmt {
+fn (mut p Parser) parse_decl(var_expr ExprVar, qualifs []DeclQualifier) Stmt {
   p.expect(.colon)
   typ := p.parse_type()
 
-  if typ is TypeFunc && p.peek().kind == .lbrace {
+  if typ is TypeFunc {
 
-    b := p.parse_block()
+    mut b := StmtBlock{}
+
+    if p.peek().kind == .lbrace{
+      b = p.parse_block()
+    } else if !qualifs.contains(.extern) {
+      p.parse_error("non-extern function declarations must have a body")
+    }
+
     mut arg_symbols := []Symbol{}
     for i := 0; i < typ.arg_names.len; i++ {
       arg_symbols << SymbolVar{
@@ -268,6 +276,7 @@ fn (mut p Parser) parse_decl(var_expr ExprVar) Stmt {
     }
     return StmtDeclFunc {
       sym: SymbolFunc {
+        qualifs: qualifs
         name: var_expr.name 
         type: typ
         arg_syms: arg_symbols
@@ -281,6 +290,7 @@ fn (mut p Parser) parse_decl(var_expr ExprVar) Stmt {
     p.expect(.semicolon)
     return StmtDeclVar {
       sym: SymbolVar {
+        qualifs: qualifs
         name: var_expr.name
         type: typ
       }    
@@ -351,7 +361,12 @@ fn (mut p Parser) parse_stmt() Stmt {
   
   if p.peek().kind.is_decl_qualifier() {
     qualifs := p.parse_decl_qualifs()
-    panic("unimplemented decl qualifs") 
+    var := p.parse_expr(.literal)
+    if var is ExprVar {
+      return p.parse_decl(var, qualifs)
+    } else {
+      p.parse_error("expected identifier after declaration qualifiers ${qualifs}")
+    }
   }
 
   return match p.peek().kind {

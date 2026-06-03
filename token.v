@@ -192,6 +192,7 @@ fn Token.from_str(s string) ?TokKind {
     "const" {.tq_const}
 
     "extern" {.dq_extern}
+    "nexter" {.dq_extern} // hi nexter
 
     "ret"   {.ret}
     "if"    {.if}
