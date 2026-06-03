@@ -1,14 +1,6 @@
-
-enum EntityKind {
-  PLAYER,
-  ENEMY,
-}
-
-struct Entity {
-  kind: EntityKind;
-}
-
 main: () {
-  player: Entity = Entity(0@EntityKind);
-  pk: EntityKind = player.kind;
+  x: i32 = 0;
+  while x < 3 {
+    ++x;
+  }
 }

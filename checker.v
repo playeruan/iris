@@ -201,7 +201,11 @@ fn (mut c Checker) check_expr(expr Expr) Type {
       if join_types(lt, rt) == none {
         c.checker_error("cannot implicitly cast between types ${lt} and ${rt}")
       }
-      lt
+      if ["<", ">", ">=", "<=", "=="].contains(expr.op) {
+        TypePrimitive{type: .bool}
+      } else {
+        lt
+      }
     }
     ExprAccess {
       lt := c.check_expr(expr.accessee)
@@ -236,6 +240,10 @@ fn (mut c Checker) check_expr(expr Expr) Type {
         c.checker_error("cannot index from non-array type ${lt}")
       }
     }
+    ExprRef {
+      it := c.resolve_type(c.check_expr(expr.inner))
+      TypePointer{inner: it}
+    }
     ExprDeref {
       lt := c.check_expr(expr.inner)
       if lt is TypePointer {
@@ -251,7 +259,7 @@ fn (mut c Checker) check_expr(expr Expr) Type {
       }
       c.resolve_type(expr.type)
     }
-    else {c.checker_error("unimplemented check_expr() for ${expr}")}
+    //else {c.checker_error("unimplemented check_expr() for ${expr}")}
   }
 }
 
@@ -284,7 +292,7 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
         c.checker_error("cannot implicitly cast value of type ${vt} \
                           to ${decl_t} for variable ${stmt.sym.name}")
       }
-      c.register_sym(stmt.sym)
+      c.register_sym(c.resolve_sym_types(stmt.sym))
     }
 
     StmtDeclFunc {
@@ -422,6 +430,14 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
 
     }
 
+    StmtWhile {
+      gt := c.check_expr(stmt.guard)
+      if join_types(gt, TypePrimitive{type: .bool}) == none {
+        c.checker_error("while guard should be of type bool")
+      }
+      c.check_stmt_block(stmt.block) 
+    }
+
     StmtContinue, StmtBreak {} //TODO: check if inside while or for
 
     else {c.checker_error("unimplemented check_stmt() for ${stmt}")}
@@ -434,5 +450,5 @@ fn Checker.check_program(ast []Stmt) {
   for stmt in ast {
     c.check_stmt(stmt)
   }
-  println(c.table)
+  //println(c.table)
 }
