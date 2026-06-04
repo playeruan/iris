@@ -501,6 +501,9 @@ fn (mut p Parser) parse_stmt() Stmt {
       p.advance()
       path := p.expect(.l_string)
 
+      if path.text == p.span.file {
+        p.parse_error("recursive include statements are not allowed") 
+      }
 
       if !os.exists(path.text) {
         p.parse_error("imported file ${path.text} does not exist")
