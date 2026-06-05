@@ -7,6 +7,14 @@ struct Checker {
   current_scope &Scope = &Scope{}
   current_ret_type ?Type = ?Type(none)
   span Span
+  result CheckedAST
+}
+
+struct CheckedAST {
+  mut:
+  ast []Stmt
+  table SymbolTable
+  scopes map[voidptr]&Scope // map[&Stmt]&Scope
 }
 
 @[noreturn]
@@ -15,8 +23,9 @@ fn (c Checker) checker_error(s string) {
 	exit(1)
 }
 
-fn (mut c Checker) push_scope() {
+fn (mut c Checker) push_scope(stmt &Stmt) {
   c.current_scope = &Scope{parent: c.current_scope}
+  c.result.scopes[stmt] = c.current_scope
 }
 
 fn (mut c Checker) pop_scope() {
@@ -266,7 +275,7 @@ fn (mut c Checker) check_expr(expr Expr) Type {
 // checking statements
 
 fn (mut c Checker) check_stmt_block(block StmtBlock) {
-	c.push_scope()
+	c.push_scope(&block)
 	for s in block.stmts {
 		c.check_stmt(s)
 	}
@@ -299,7 +308,7 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
       if !stmt.sym.name.is_lower() {
         c.checker_error("function names must be snake case (${stmt.sym.name} -> ${stmt.sym.name.camel_to_snake()})")
       }
-      c.push_scope()
+      c.push_scope(&stmt)
 
       func_t := stmt.sym.type as TypeFunc
       c.current_ret_type = c.resolve_type(func_t.ret)
@@ -446,11 +455,20 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
   }
 }
 
-fn Checker.check_program(ast []Stmt) {
-  mut c := Checker{table: SymbolTable{}}
+fn Checker.check_program(ast []Stmt) CheckedAST {
+  mut c := Checker{
+    table: SymbolTable{}, 
+    result: CheckedAST{
+      ast: ast
+    }
+  }
+
+  c.result.table = c.table
+
   c.current_scope = c.table.root_scope
   for stmt in ast {
     c.check_stmt(stmt)
   }
-  //println(c.table)
+
+  return c.result
 }

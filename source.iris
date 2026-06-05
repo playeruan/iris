@@ -1,2 +1,16 @@
-include "source.iris"
 
+struct Vec2 {
+  x: i32;
+  y: i32;
+}
+
+enum Kinds {
+  FIRST
+  SECOND
+  LAST
+}
+
+main: () -> i32 {
+  a: Vec2 = Vec2(0, 0);
+  ret 0;
+}
