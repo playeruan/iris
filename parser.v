@@ -73,7 +73,10 @@ fn (mut p Parser) parse_type_qualifs() []TypeQualifier {
 fn (mut p Parser) parse_primary() Expr {
   t := p.peek()
   if t.kind.is_type_qualifier() || t.kind.is_primitive_type() {
-    return ExprType{type: p.parse_type()}
+    return ExprType{
+      type: p.parse_type()
+      id: p.next_id()
+    }
   }
   p.advance()
   return match t.kind {
@@ -84,6 +87,7 @@ fn (mut p Parser) parse_primary() Expr {
           type: .i32
         }
         value: LiteralValue{i64: t.text.i64()}
+        id: p.next_id()
       }
     }
     .l_float  {
@@ -93,6 +97,7 @@ fn (mut p Parser) parse_primary() Expr {
           type: .f32
         }
         value: LiteralValue{f64: t.text.f64()}
+        id: p.next_id()
       }
     }
     .l_true, .l_false {
@@ -102,6 +107,7 @@ fn (mut p Parser) parse_primary() Expr {
           type: .bool
         }
         value: LiteralValue{bool: t.kind == .l_true}
+        id: p.next_id()
       }
     }
     .l_string {
@@ -111,6 +117,7 @@ fn (mut p Parser) parse_primary() Expr {
           type: .string
         }
         value: LiteralValue{string: t.text}
+        id: p.next_id()
       } 
     }
     .identifier {
@@ -131,13 +138,20 @@ fn (mut p Parser) parse_primary() Expr {
             name: t.text
           }
           argv: argv
+          id: p.next_id()
         }
       } else {
-        ExprVar{name: t.text}
+        ExprVar{
+          name: t.text
+          id: p.next_id()
+        }
       }
     }
     .lparen {
-      e := ExprGroup{inner: p.parse_expr(.literal)}
+      e := ExprGroup{
+        inner: p.parse_expr(.literal)
+        id: p.next_id()
+      }
       p.expect(.rparen)
       e
     }
@@ -150,14 +164,23 @@ fn (mut p Parser) parse_primary() Expr {
         }
       }
       p.expect(.rsquare)
-      ExprLiteralArray{argv: elems}
+      ExprLiteralArray{
+        argv: elems
+        id: p.next_id()
+      }
     }
     .o_minus, .o_exclam, .o_tilde, .o_plusplus, .o_minusminus {p.parse_unary_prefix(t.text, .prefix)}
     .o_and {
-      ExprRef{inner: p.parse_expr(.prefix)}
+      ExprRef{
+        inner: p.parse_expr(.prefix)
+        id: p.next_id()
+      }
     }
     .o_caret {
-      ExprDeref{inner: p.parse_expr(.prefix)}
+      ExprDeref{
+        inner: p.parse_expr(.prefix)
+        id: p.next_id()
+      }
     }
     else {p.parse_error("invalid expr token of kind ${t.kind}")}
   }
@@ -172,17 +195,26 @@ fn (mut p Parser) parse_call(callee Expr) ExprCall {
     }
   }
   p.expect(.rparen)
-  return ExprCall{callee: callee, argv: argv}
+  return ExprCall{
+    callee: callee, argv: argv
+    id: p.next_id()
+  }
 }
 
 fn (mut p Parser) parse_unary_prefix(op string, prec Precedence) Expr {
   right := p.parse_expr(prec)
-  return ExprUnary{op: op, operand: right}
+  return ExprUnary{
+    op: op, operand: right
+    id: p.next_id()
+  }
 }
 
 fn (mut p Parser) parse_binary(left Expr, op string, prec Precedence) Expr {
   right := p.parse_expr(prec)
-  return ExprBinary{op: op, left: left, right: right}
+  return ExprBinary{
+    op: op, left: left, right: right
+    id: p.next_id()
+  }
 }
 
 fn (mut p Parser) parse_expr(pr Precedence) Expr {
@@ -195,15 +227,24 @@ fn (mut p Parser) parse_expr(pr Precedence) Expr {
       .lsquare {
         idx := p.parse_expr(.literal)
         p.expect(.rsquare)
-        ExprIndex{indexee: expr, idx: idx}
+        ExprIndex{
+          indexee: expr, idx: idx
+          id: p.next_id()
+        }
       }
       .dot {
         ident := p.expect(.identifier)
-        ExprAccess{accessee: expr, member: ExprVar{name: ident.text}}
+        ExprAccess{
+          accessee: expr, member: ExprVar{name: ident.text}
+          id: p.next_id()
+        }
       }
       .at {
         t := p.parse_type()
-        ExprCast{castee: expr, type: t}
+        ExprCast{
+          castee: expr, type: t
+          id: p.next_id()
+        }
       }
       else {p.parse_binary(expr, op_tok.text, op_tok.kind.precedence())}
     }

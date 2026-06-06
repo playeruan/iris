@@ -19,66 +19,80 @@ type Expr =
 
 struct ExprVar {
   name string
+  id i32
 }
 
 struct ExprLiteralPrimitive {
   type TypePrimitive 
   value LiteralValue 
+  id i32
 }
 
 struct ExprLiteralStruct {
   type TypeStruct
   argv []Expr
+  id i32
 }
 
 struct ExprLiteralArray {
   of_type Type
   argv []Expr
+  id i32
 }
 
 struct ExprGroup {
   inner Expr
+  id i32
 }
 
 struct ExprCall {
   callee Expr
   argv []Expr
+  id i32
 }
 
 struct ExprIndex {
   indexee Expr
   idx     Expr
+  id i32
 }
 
 struct ExprAccess {
   accessee  Expr
   member    ExprVar
+  id i32
 }
 
 struct ExprType {
   type Type
+  id i32
 }
 
 struct ExprCast {
   castee Expr
   type Type
+  id i32
 }
 
 struct ExprRef {
   inner Expr
+  id i32
 }
 
 struct ExprDeref {
   inner Expr
+  id i32
 }
 
 struct ExprBinary {
   op string
   left Expr
   right Expr
+  id i32
 }
 
 struct ExprUnary {
   op string
   operand Expr
+  id i32
 }

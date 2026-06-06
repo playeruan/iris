@@ -30,6 +30,7 @@ enum TokKind as u8 {
   t_f32
   t_void
   t_bool
+  t_string
   t_type
 
   l_int
@@ -142,6 +143,7 @@ fn Token.from_str(s string) ?TokKind {
     "f32"   {.t_f32}
     "void"  {.t_void}
     "bool"  {.t_bool}
+    "string"{.t_string}
     "type"  {.t_type}
     "true"  {.l_true}
     "false" {.l_false}

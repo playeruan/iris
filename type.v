@@ -33,6 +33,7 @@ fn BuiltinType.from_tok_kind(t TokKind) BuiltinType {
     .t_bool   {.bool}
     .t_void   {.void}
     .t_type   {.type}
+    .t_string {.string}
     else      {
       panic("invalid TokKind ${t} to convert to BuiltinType")
     }

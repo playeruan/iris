@@ -5,7 +5,7 @@ struct Checker {
   mut: 
   table SymbolTable
   current_scope &Scope = &Scope{}
-  current_ret_type ?Type = ?Type(none)
+  ret_type_stack []Type = []Type{}
   span Span
   result CheckedAST
 }
@@ -15,6 +15,7 @@ struct CheckedAST {
   ast []Stmt
   table SymbolTable
   scopes map[i32]&Scope // map[id]&Scope
+  casts_resolved map[i32]Type //map[id]Type
 }
 
 @[noreturn]
@@ -146,6 +147,7 @@ fn (mut c Checker) resolve_sym_types(s Symbol) Symbol {
 // checking expressions
 
 fn (mut c Checker) check_expr(expr Expr) Type {
+  assert(expr.id != 0)
   return match expr {
     ExprType {c.resolve_type(expr.type)}
     ExprLiteralPrimitive {expr.type} // no need to resolve because it's always known here
@@ -266,6 +268,7 @@ fn (mut c Checker) check_expr(expr Expr) Type {
       if cast_types(what, c.resolve_type(expr.type)) == none {
         c.checker_error("cannot cast ${what} to ${expr.type}")
       }
+      c.result.casts_resolved[expr.id] = c.resolve_type(expr.type)
       c.resolve_type(expr.type)
     }
     //else {c.checker_error("unimplemented check_expr() for ${expr}")}
@@ -313,7 +316,7 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
       c.push_scope(&stmt)
 
       func_t := stmt.sym.type as TypeFunc
-      c.current_ret_type = c.resolve_type(func_t.ret)
+      c.ret_type_stack << c.resolve_type(func_t.ret)
 
       for i := 0; i < stmt.sym.type.arg_types.len; i++ {
         n := stmt.sym.type.arg_names[i]
@@ -339,6 +342,8 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
       }
 
       c.pop_scope()
+
+      c.ret_type_stack.pop()
 
       c.register_sym(c.resolve_sym_types(stmt.sym))
     }
@@ -425,9 +430,10 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
 
     StmtReturn {
       expr_t := c.check_expr(stmt.expr)
-      if c.current_ret_type != none {
-        if join_types(c.current_ret_type, expr_t) == none { 
-          c.checker_error("expected return of type ${c.current_ret_type} but got ${expr_t}")
+      if c.ret_type_stack.len > 0 {
+        current_ret := c.ret_type_stack[c.ret_type_stack.len-1]
+        if join_types(current_ret, expr_t) == none { 
+          c.checker_error("expected return of type ${current_ret} but got ${expr_t}")
         }
       } else {
         c.checker_error("cannot return if not inside a function")
