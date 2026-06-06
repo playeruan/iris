@@ -10,6 +10,12 @@ struct Parser {
   ast []Stmt
   pos u32
   span Span
+  last_id i32
+}
+
+fn (mut p Parser) next_id() i32 {
+  p.last_id++
+  return p.last_id
 }
 
 @[noreturn]
@@ -232,6 +238,7 @@ fn (mut p Parser) parse_block() StmtBlock {
   return StmtBlock {
     stmts: stmts 
     span: p.span
+    id: p.next_id()
   }
 }
 
@@ -250,6 +257,7 @@ fn (mut p Parser) parse_stmt_expr() Stmt {
   return StmtExpr {
     expr: expr
     span: p.span
+    id: p.next_id()
   }
 }
 
@@ -259,7 +267,7 @@ fn (mut p Parser) parse_decl(var_expr ExprVar, qualifs []DeclQualifier) Stmt {
 
   if typ is TypeFunc {
 
-    mut b := StmtBlock{}
+    mut b := ?StmtBlock(none)
 
     if p.peek().kind == .lbrace{
       b = p.parse_block()
@@ -281,8 +289,9 @@ fn (mut p Parser) parse_decl(var_expr ExprVar, qualifs []DeclQualifier) Stmt {
         type: typ
         arg_syms: arg_symbols
       }
-      block: b 
+      block: b or {StmtBlock{span: p.span, id: p.next_id()}}
       span: p.span
+      id: p.next_id()
     }
   } else {
     p.expect(.o_eq)
@@ -296,6 +305,7 @@ fn (mut p Parser) parse_decl(var_expr ExprVar, qualifs []DeclQualifier) Stmt {
       }    
       value: val 
       span: p.span
+      id: p.next_id()
     }
   }
 }
@@ -308,6 +318,7 @@ fn (mut p Parser) parse_assignment(left Expr) StmtAssign {
     assignee: left
     val: v
     span: p.span
+    id: p.next_id()
   }
 }
 
@@ -321,6 +332,7 @@ fn (mut p Parser) parse_while() StmtWhile {
     guard: g
     block: b
     span: p.span
+    id: p.next_id()
   }
 }
 
@@ -335,9 +347,7 @@ fn (mut p Parser) parse_branch() StmtBranch {
 
   for p.peek().kind == .elif {
     p.expect(.elif)
-    dump(p.peek())
     elif_gs << p.parse_expr(.literal)
-    dump(p.peek())
     elif_bs << p.parse_block()
   }
 
@@ -380,6 +390,7 @@ fn (mut p Parser) parse_stmt() Stmt {
             p.parse_expr(.literal)
           }
         span: p.span
+        id: p.next_id()
       }
       p.expect(.semicolon)
       r
@@ -387,13 +398,19 @@ fn (mut p Parser) parse_stmt() Stmt {
     .lbrace {p.parse_block()}
     .continue {
       p.advance()
-      c := StmtContinue{span: p.span}
+      c := StmtContinue{
+        span: p.span
+        id: p.next_id()
+      }
       p.expect(.semicolon)
       c
     }
     .break  {
       p.advance()
-      b := StmtBreak{span: p.span}
+      b := StmtBreak{
+        span: p.span
+        id: p.next_id()
+      }
       p.expect(.semicolon)
       b
     }
@@ -423,6 +440,7 @@ fn (mut p Parser) parse_stmt() Stmt {
           type: TypePrimitive{type: .i32} 
           override_value: def_val
           span: p.span
+          id: p.next_id()
         }
         mem_syms << SymbolVar{
           qualifs: [] //TODO: handle qualifs for members
@@ -442,6 +460,7 @@ fn (mut p Parser) parse_stmt() Stmt {
         } 
         members: member_decls
         span: p.span
+        id: p.next_id()
       }
 
     }
@@ -473,6 +492,7 @@ fn (mut p Parser) parse_stmt() Stmt {
           type: t
           default_value: def_val
           span: p.span
+          id: p.next_id()
         }
         mem_syms << SymbolVar{
           qualifs: [] //TODO: handle qualifs for members
@@ -494,6 +514,7 @@ fn (mut p Parser) parse_stmt() Stmt {
         } 
         members: member_decls
         span: p.span
+        id: p.next_id()
       }
 
     }
@@ -516,6 +537,7 @@ fn (mut p Parser) parse_stmt() Stmt {
       StmtInclude{
         path: path.text
         span: p.span
+        id: p.next_id()
       }
     }
     .while  {p.parse_while()}

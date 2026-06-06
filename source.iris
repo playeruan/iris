@@ -4,13 +4,14 @@ struct Vec2 {
   y: i32;
 }
 
-enum Kinds {
-  FIRST
-  SECOND
-  LAST
+struct Vec3 {
+  x: i32;
+  y: i32;
+  z: i32;
 }
 
 main: () -> i32 {
   a: Vec2 = Vec2(0, 0);
+  ap: ^i32 = (&a)@^i32; 
   ret 0;
 }

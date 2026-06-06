@@ -14,7 +14,7 @@ struct CheckedAST {
   mut:
   ast []Stmt
   table SymbolTable
-  scopes map[voidptr]&Scope // map[&Stmt]&Scope
+  scopes map[i32]&Scope // map[id]&Scope
 }
 
 @[noreturn]
@@ -24,8 +24,8 @@ fn (c Checker) checker_error(s string) {
 }
 
 fn (mut c Checker) push_scope(stmt &Stmt) {
-  c.current_scope = &Scope{parent: c.current_scope}
-  c.result.scopes[stmt] = c.current_scope
+  c.result.scopes[stmt.id] = &Scope{parent: c.current_scope}
+  c.current_scope = c.result.scopes[stmt.id] or {panic("wtf")}
 }
 
 fn (mut c Checker) pop_scope() {
@@ -275,6 +275,7 @@ fn (mut c Checker) check_expr(expr Expr) Type {
 // checking statements
 
 fn (mut c Checker) check_stmt_block(block StmtBlock) {
+  assert(block.id != 0)
 	c.push_scope(&block)
 	for s in block.stmts {
 		c.check_stmt(s)
@@ -283,6 +284,7 @@ fn (mut c Checker) check_stmt_block(block StmtBlock) {
 }
 
 fn (mut c Checker) check_stmt(stmt Stmt) {
+  assert(stmt.id != 0)
   c.span = stmt.span
   match stmt {
     StmtExpr {c.check_expr(stmt.expr)} 

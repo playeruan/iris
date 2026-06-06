@@ -40,13 +40,22 @@ fn (mut g Generator) gen_type(t Type) string {
     TypeArray   {"${g.gen_type(t.inner)}*"}
     TypeStruct  {"struct ${t.name}"}
     TypeEnum    {"enum ${t.name}"}
-    else        {g.gen_error("something went wrong here")}
+    else        {g.gen_error("something went wrong here, type: ${t}")}
   }
 }
 
 fn (mut g Generator) gen_expr(e Expr) string {
   unsafe {
     return match e {
+      ExprGroup {
+        "(${g.gen_expr(e.inner)})"
+      }
+      ExprRef {
+        "(&${g.gen_expr(e.inner)})"
+      }
+      ExprDeref {
+        "(*${g.gen_expr(e.inner)})"
+      }
       ExprLiteralPrimitive {
         s := match e.type.type {
           .i32 {e.value.i64.str()}
@@ -58,7 +67,11 @@ fn (mut g Generator) gen_expr(e Expr) string {
         }
         s
       }
+      ExprLiteralStruct {
+        "(${g.gen_type(e.type)}){}"
+      }
       ExprVar {e.name}
+      ExprCast {"((${g.gen_type(e.type)})${g.gen_expr(e.castee)})"}
       ExprBinary {"(${g.gen_expr(e.left)}${e.op}${g.gen_expr(e.right)})"}
       ExprUnary  {"(${e.op}${g.gen_expr(e.operand)})"}
       else {g.gen_error("unimplemented expr ${e}")}
@@ -71,8 +84,8 @@ fn (mut g Generator) gen_stmt(s Stmt) {
     StmtExpr {g.write_tabbed(g.gen_expr(s.expr))}
     StmtBlock {
       g.tabs++
-      if &s in g.checked_ast.scopes {
-        g.current_scope = g.checked_ast.scopes[&s] or {g.gen_error("scope not found")}
+      if s.id in g.checked_ast.scopes {
+        g.current_scope = g.checked_ast.scopes[s.id] or {g.gen_error("scope not found")}
       }
       for s_ in s.stmts {
         g.gen_stmt(s_)
@@ -80,7 +93,6 @@ fn (mut g Generator) gen_stmt(s Stmt) {
       g.tabs--
     }
     StmtDeclVar {
-      dump(g.current_scope)
       sym := g.current_scope.lookup_sym(s.sym.name) or {g.gen_error("forgot to register a symbol")}
       g.write_tabbed("${g.gen_type(sym.type)} ${s.sym.name} = ${g.gen_expr(s.value)};")
     }
@@ -90,7 +102,7 @@ fn (mut g Generator) gen_stmt(s Stmt) {
       g.gend_fn_decl.writeln(declar+";")
       g.gend_main.writeln(declar + "\n{")
       g.gen_stmt(s.block)  
-      g.gend_main.writeln("}")
+      g.gend_main.writeln("}\n\n")
     }
     StmtReturn    {g.write_tabbed("return ${g.gen_expr(s.expr)};")}
     StmtContinue  {g.write_tabbed("continue;")}
@@ -100,7 +112,7 @@ fn (mut g Generator) gen_stmt(s Stmt) {
       for m in s.members {
         g.gen_stmt(m)
       }
-      g.gend_struct_decl.writeln("}")
+      g.gend_struct_decl.writeln("};\n")
     }
     StmtDeclMember {
       g.gend_struct_decl.writeln("\t${g.gen_type(s.type)} ${s.name};")

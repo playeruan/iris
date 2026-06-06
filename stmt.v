@@ -28,23 +28,27 @@ type Stmt =
 struct StmtExpr {
   expr Expr
   span Span
+  id i32
 }
 
 struct StmtBlock {
   stmts []Stmt
   span Span
+  id i32
 }
 
 struct StmtDeclVar {
   sym Symbol
   value Expr
   span Span
+  id i32
 }
 
 struct StmtDeclFunc {
   sym Symbol
   block StmtBlock
   span Span
+  id i32
 }
 
 struct StmtDeclMember {
@@ -52,12 +56,14 @@ struct StmtDeclMember {
   type Type
   default_value ?Expr
   span Span
+  id i32
 }
 
 struct StmtDeclStruct {
   sym Symbol
   members []StmtDeclMember
   span Span
+  id i32
 }
 
 struct StmtDeclEnumMember {
@@ -65,17 +71,20 @@ struct StmtDeclEnumMember {
   type Type
   override_value ?Expr
   span Span
+  id i32
 }
 
 struct StmtDeclEnum {
   sym Symbol
   members []StmtDeclEnumMember
   span Span
+  id i32
 }
 
 struct StmtReturn {
   expr Expr
   span Span
+  id i32
 }
 
 struct StmtBranch {
@@ -85,6 +94,7 @@ struct StmtBranch {
   elif_blocks ?[]StmtBlock
   else_block ?StmtBlock
   span Span
+  id i32
 }
 
 struct StmtFor {
@@ -93,29 +103,35 @@ struct StmtFor {
   loop  Stmt
   block StmtBlock
   span Span
+  id i32
 }
 
 struct StmtWhile {
   guard Expr
   block StmtBlock
   span Span
+  id i32
 }
 
 struct StmtContinue {
   span Span
+  id i32
 }
 
 struct StmtBreak {
   span Span
+  id i32
 }
 
 struct StmtAssign {
   assignee Expr
   val Expr
   span Span
+  id i32
 }
 
 struct StmtInclude {
   path string
   span Span
+  id i32
 }
