@@ -20,7 +20,7 @@ fn (qs []TypeQualifier) str() string {
 enum BuiltinType as u8 {
   void
   i32
-  u8
+  u8 // TODO: implement this properly
   f32
   bool
   string
