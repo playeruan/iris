@@ -418,10 +418,67 @@ fn (mut p Parser) parse_branch() StmtBranch {
   }
 }
 
+fn (mut p Parser) parse_decl_struct(qualifs []DeclQualifier) StmtDeclStruct {
+  p.advance() 
+  t_name := p.expect(.identifier)
+  p.expect(.lbrace)
+
+  mut member_decls := []StmtDeclMember{}
+  mut mem_syms := []Symbol{}
+
+  for p.peek().kind != .rbrace {
+    n := p.expect(.identifier).text 
+    p.expect(.colon)
+    t := p.parse_type()
+    mut def_val := ?Expr(none)
+
+    if p.peek().kind == .o_eq {
+      if t is TypeFunc {
+        p.parse_error("a member of type ${Type(t)} cannot have a default value") 
+      }
+      p.advance()
+      def_val = p.parse_expr(.literal)
+    }
+
+    p.expect(.semicolon)
+    member_decls << StmtDeclMember{
+      name: n 
+      type: t
+      default_value: def_val
+      span: p.span
+      id: p.next_id()
+    }
+    mem_syms << SymbolVar{
+      qualifs: [] //TODO: handle qualifs for members
+      name: n 
+      type: t 
+    }
+  }
+
+  p.expect(.rbrace)
+
+  return StmtDeclStruct{
+    sym: SymbolStruct{
+      qualifs: qualifs
+      name: t_name.text
+      type: TypeStruct {
+        name: t_name.text
+      }
+      member_syms: mem_syms
+    } 
+    members: member_decls
+    span: p.span
+    id: p.next_id()
+  }
+}
+
 fn (mut p Parser) parse_stmt() Stmt {
   
   if p.peek().kind.is_decl_qualifier() {
     qualifs := p.parse_decl_qualifs()
+    if p.peek().kind == .struct {
+      return p.parse_decl_struct(qualifs)
+    }
     var := p.parse_expr(.literal)
     if var is ExprVar {
       return p.parse_decl(var, qualifs)
@@ -516,58 +573,7 @@ fn (mut p Parser) parse_stmt() Stmt {
 
     }
     .struct {
-      p.advance() 
-      t_name := p.expect(.identifier)
-      p.expect(.lbrace)
-
-      mut member_decls := []StmtDeclMember{}
-      mut mem_syms := []Symbol{}
-      
-      for p.peek().kind != .rbrace {
-        n := p.expect(.identifier).text 
-        p.expect(.colon)
-        t := p.parse_type()
-        mut def_val := ?Expr(none)
-
-        if p.peek().kind == .o_eq {
-          if t is TypeFunc {
-            p.parse_error("a member of type ${Type(t)} cannot have a default value") 
-          }
-          p.advance()
-          def_val = p.parse_expr(.literal)
-        }
-
-        p.expect(.semicolon)
-        member_decls << StmtDeclMember{
-          name: n 
-          type: t
-          default_value: def_val
-          span: p.span
-          id: p.next_id()
-        }
-        mem_syms << SymbolVar{
-          qualifs: [] //TODO: handle qualifs for members
-          name: n 
-          type: t 
-        }
-      }
-      
-      p.expect(.rbrace)
-
-
-      StmtDeclStruct{
-        sym: SymbolStruct{
-          name: t_name.text
-          type: TypeStruct {
-            name: t_name.text
-          }
-          member_syms: mem_syms
-        } 
-        members: member_decls
-        span: p.span
-        id: p.next_id()
-      }
-
+      p.parse_decl_struct([])
     }
     .include {
       p.advance()

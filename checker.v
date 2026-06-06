@@ -122,6 +122,7 @@ fn (mut c Checker) resolve_sym_types(s Symbol) Symbol {
       SymbolFunc {
         qualifs: s.qualifs 
         name: s.name
+        ext_name: s.ext_name
         type: c.resolve_type(s.type)
         arg_syms: s.arg_syms.map(c.resolve_sym_types(it))
       }

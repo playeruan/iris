@@ -113,7 +113,7 @@ fn (mut g Generator) gen_expr(e Expr) string {
       ExprBinary {"(${g.gen_expr(e.left)}${e.op}${g.gen_expr(e.right)})"}
       ExprUnary  {"(${e.op}${g.gen_expr(e.operand)})"}
       ExprIndex  {"${g.gen_expr(e.indexee)}[${g.gen_expr(e.idx)}]"}
-      ExprAccess {"${g.gen_expr(e.accessee)}.${g.gen_expr(e.member)}"}
+      ExprAccess {"${g.gen_expr(e.accessee)}.${e.member.name}"}
     }
   }
 }
@@ -136,16 +136,17 @@ fn (mut g Generator) gen_stmt(s Stmt) {
       g.writeln_tabbed("${g.gen_type(sym.type)} ${g.mangle_ident(s.sym.name)} = ${g.gen_expr(s.value)};")
     }
     StmtDeclFunc {
-      args := (s.sym as SymbolFunc).arg_syms
-      if s.sym.type.variadic_type != none {
-        g.gend_fn_decl.write_string("#define ${g.mangle_ident(s.sym.name)}(")
+      sym := g.current_scope.lookup_sym(s.sym.name) or {g.gen_error("didn't find func symbol (bad!)")}
+      args := (sym as SymbolFunc).arg_syms
+      if sym.type.variadic_type != none {
+        g.gend_fn_decl.write_string("#define ${g.mangle_ident(sym.name)}(")
         for arg in args {
           g.gend_fn_decl.write_string("${g.mangle_ident(arg.name)}")
           if arg != args[args.len-1] {
             g.gend_fn_decl.write_string(", ")
           }
         }
-        g.gend_fn_decl.write_string(", ...) ${s.sym.name}(")
+        g.gend_fn_decl.write_string(", ...) ${sym.name}(")
         for arg in args {
           g.gend_fn_decl.write_string("${g.mangle_ident(arg.name)}")
           if arg != args[args.len-1] {
@@ -155,7 +156,7 @@ fn (mut g Generator) gen_stmt(s Stmt) {
         g.gend_fn_decl.writeln(", ##__VA_ARGS__)")
         return
       }
-      mut declar := "${g.gen_type(s.sym.type.ret)} ${g.mangle_ident(s.sym.name)}("
+      mut declar := "${g.gen_type(sym.type.ret)} ${g.mangle_ident(sym.name)}("
       for arg in args {
         declar += "${g.gen_type(arg.type)} ${g.mangle_ident(arg.name)}" 
         if arg != args[args.len-1] {
@@ -165,10 +166,11 @@ fn (mut g Generator) gen_stmt(s Stmt) {
       declar += ")"
       g.gend_fn_decl.writeln(declar+";")
       g.gend_main.writeln(declar + "\n{")
-      if s.sym.qualifs.contains(.extern) {
-        name := s.sym.ext_name or {s.sym.name}
+      if sym.qualifs.contains(.extern) {
+        dump(sym)
+        name := sym.ext_name or {sym.name}
         g.tabs++
-        if s.sym.type.ret != Type(TypePrimitive{type: .void}) {
+        if sym.type.ret != Type(TypePrimitive{type: .void}) {
           g.write_tabbed("return ")
         }
         g.write_tabbed("${name}(") 
@@ -190,6 +192,10 @@ fn (mut g Generator) gen_stmt(s Stmt) {
     StmtContinue  {g.writeln_tabbed("continue;")}
     StmtBreak     {g.writeln_tabbed("break;")}
     StmtDeclStruct {
+      if s.sym.qualifs.contains(.extern) {
+        g.gend_struct_decl.writeln("#define ${g.mangle_ident(s.sym.name)} ${s.sym.name}")
+        return
+      }
       g.gend_struct_decl.writeln("struct ${g.mangle_ident(s.sym.name)} {")
       for m in s.members {
         g.gen_stmt(m)
@@ -197,7 +203,7 @@ fn (mut g Generator) gen_stmt(s Stmt) {
       g.gend_struct_decl.writeln("};\n")
     }
     StmtDeclMember {
-      g.gend_struct_decl.writeln("\t${g.gen_type(s.type)} ${g.mangle_ident(s.name)};")
+      g.gend_struct_decl.writeln("\t${g.gen_type(s.type)} ${s.name};")
     }
     StmtDeclEnum {
       g.gend_struct_decl.writeln("enum ${g.mangle_ident(s.sym.name)} {")
@@ -227,7 +233,7 @@ fn (mut g Generator) gen_stmt(s Stmt) {
 }
 
 fn Generator.gen_program(checked_ast CheckedAST) {
-  mut g := Generator{checked_ast: checked_ast, current_scope: &Scope{}}
+  mut g := Generator{checked_ast: checked_ast, current_scope: checked_ast.table.root_scope}
   for stmt in g.checked_ast.ast {
     g.gen_stmt(stmt)
   }
