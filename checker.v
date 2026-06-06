@@ -101,6 +101,7 @@ fn (mut c Checker) resolve_type(t Type) Type {
       qualifs: t.qualifs 
       arg_types: t.arg_types.map(c.resolve_type(it))
       arg_names: t.arg_names
+      variadic_type: t.variadic_type
       captured_names: t.captured_names 
       ret: c.resolve_type(t.ret)
     }
@@ -174,15 +175,21 @@ fn (mut c Checker) check_expr(expr Expr) Type {
     ExprCall {
       callee_typ := c.check_expr(expr.callee)
       if callee_typ is TypeFunc {
-        if expr.argv.len != callee_typ.arg_types.len {
+        if callee_typ.variadic_type == none && expr.argv.len != callee_typ.arg_types.len {
           c.checker_error("function requires ${callee_typ.arg_types.len} args, got ${expr.argv.len}")
+        } else if callee_typ.variadic_type != none && expr.argv.len < callee_typ.arg_types.len {
+          c.checker_error("function requires at least ${callee_typ.arg_types.len} args, got ${expr.argv.len}")
         }
         sym := c.table.root_scope.lookup_sym(expr.callee.name) or {
           c.checker_error("calling undeclared function ${expr.callee.name}")
         }
         for i := 0; i < expr.argv.len; i++ {
           t := c.check_expr(expr.argv[i])
-          req_t := sym.arg_syms[i].type
+          req_t := if i < sym.arg_syms.len {
+            sym.arg_syms[i].type
+          } else {
+            sym.type.variadic_type or {c.checker_error("unreachable (I hope)")}
+          }
           if join_types(t, req_t) == none {
           c.checker_error("cannot implicitly cast value of type ${t} \
                           to ${req_t} for argument ${i+1}")
@@ -316,11 +323,16 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
       c.push_scope(&stmt)
 
       func_t := stmt.sym.type as TypeFunc
+
+      if func_t.variadic_type != none && !stmt.sym.qualifs.contains(.extern) {
+        c.checker_error("variadic args are only allowed in extern qualified functions right now")
+      }
+
       c.ret_type_stack << c.resolve_type(func_t.ret)
 
       for i := 0; i < stmt.sym.type.arg_types.len; i++ {
         n := stmt.sym.type.arg_names[i]
-        t := stmt.sym.type.arg_types[i]
+        t := c.resolve_type(stmt.sym.type.arg_types[i])
         c.register_sym(SymbolVar{name: n, type: t})
       }
 
@@ -337,7 +349,7 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
         returns = returns || c.does_stmt_always_return(s)
       }
 
-      if func_t.ret != Type(TypePrimitive{type: .void}) && !returns {
+      if !stmt.sym.qualifs.contains(.extern) && func_t.ret != Type(TypePrimitive{type: .void}) && !returns {
         c.checker_error("a non-void function must return a value in all paths")
       }
 

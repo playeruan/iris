@@ -309,6 +309,15 @@ fn (mut p Parser) parse_decl(var_expr ExprVar, qualifs []DeclQualifier) Stmt {
   if typ is TypeFunc {
 
     mut b := ?StmtBlock(none)
+    mut ext_name := ?string(none)
+
+    if qualifs.contains(.extern) && p.peek().kind == .o_hash {
+      p.advance() 
+      if p.peek().kind == .d_extname {
+        p.advance()
+        ext_name = p.expect(.identifier).text
+      }
+    }
 
     if p.peek().kind == .lbrace{
       b = p.parse_block()
@@ -327,6 +336,7 @@ fn (mut p Parser) parse_decl(var_expr ExprVar, qualifs []DeclQualifier) Stmt {
       sym: SymbolFunc {
         qualifs: qualifs
         name: var_expr.name 
+        ext_name : ext_name
         type: typ
         arg_syms: arg_symbols
       }
@@ -633,8 +643,16 @@ fn (mut p Parser) parse_func_type(qualifs []TypeQualifier) TypeFunc {
   p.expect(.lparen)
   mut arg_names := []string{}
   mut arg_types := []Type{}
+  mut variadic_t := ?Type(none)
 
   for p.peek().kind != .rparen {
+
+    if p.peek().kind == .o_ellipsis {
+      p.advance() 
+      variadic_t = p.parse_type()
+      break
+    }
+
     arg_names << p.advance().text
     p.expect(.colon)
     arg_types << p.parse_type()
@@ -672,6 +690,7 @@ fn (mut p Parser) parse_func_type(qualifs []TypeQualifier) TypeFunc {
     qualifs: qualifs
     arg_types: arg_types
     arg_names: arg_names
+    variadic_type: variadic_t
     captured_names: captured_names
     ret: ret
   }

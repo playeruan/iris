@@ -1,0 +1,13 @@
+
+struct Color {
+    r: u8; 
+    g: u8; 
+    b: u8; 
+    a: u8; 
+}
+
+extern init_window: (w: i32, h: i32, title: string) #extname InitWindow
+extern set_target_fps: (fps: i32) #extname SetTargetFPS
+extern window_should_close: () -> bool #extname WindowShouldClose
+extern begin_drawing: () #extname BeginDrawing
+extern end_drawing: () #extname EndDrawing

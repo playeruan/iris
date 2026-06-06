@@ -36,6 +36,7 @@ fn (mut g Generator) gen_type(t Type) string {
     TypePrimitive {
       match t.type {
         .i32 {"int"} 
+        .u8  {"unsigned char"}
         .f32 {"float"}
         .bool {"bool"}
         .string {"char*"}
@@ -66,11 +67,13 @@ fn (mut g Generator) gen_expr(e Expr) string {
       ExprLiteralPrimitive {
         s := match e.type.type {
           .i32 {e.value.i64.str()}
+          .u8  {e.value.i64.str()}
           .f32 {e.value.f64.str()}
           .bool {e.value.bool.str()}
           .string {"\"${e.value.string}\""}
           .type {g.gen_error("unimplemented type type")}
           .void {""}
+          .any {g.gen_error("unimplemented type any")}
         }
         s
       }
@@ -133,8 +136,26 @@ fn (mut g Generator) gen_stmt(s Stmt) {
       g.writeln_tabbed("${g.gen_type(sym.type)} ${g.mangle_ident(s.sym.name)} = ${g.gen_expr(s.value)};")
     }
     StmtDeclFunc {
-      mut declar := "${g.gen_type(s.sym.type.ret)} ${g.mangle_ident(s.sym.name)}("
       args := (s.sym as SymbolFunc).arg_syms
+      if s.sym.type.variadic_type != none {
+        g.gend_fn_decl.write_string("#define ${g.mangle_ident(s.sym.name)}(")
+        for arg in args {
+          g.gend_fn_decl.write_string("${g.mangle_ident(arg.name)}")
+          if arg != args[args.len-1] {
+            g.gend_fn_decl.write_string(", ")
+          }
+        }
+        g.gend_fn_decl.write_string(", ...) ${s.sym.name}(")
+        for arg in args {
+          g.gend_fn_decl.write_string("${g.mangle_ident(arg.name)}")
+          if arg != args[args.len-1] {
+            g.gend_fn_decl.write_string(", ")
+          }
+        }
+        g.gend_fn_decl.writeln(", ##__VA_ARGS__)")
+        return
+      }
+      mut declar := "${g.gen_type(s.sym.type.ret)} ${g.mangle_ident(s.sym.name)}("
       for arg in args {
         declar += "${g.gen_type(arg.type)} ${g.mangle_ident(arg.name)}" 
         if arg != args[args.len-1] {
@@ -145,8 +166,12 @@ fn (mut g Generator) gen_stmt(s Stmt) {
       g.gend_fn_decl.writeln(declar+";")
       g.gend_main.writeln(declar + "\n{")
       if s.sym.qualifs.contains(.extern) {
+        name := s.sym.ext_name or {s.sym.name}
         g.tabs++
-        g.write_tabbed("${s.sym.name}(") 
+        if s.sym.type.ret != Type(TypePrimitive{type: .void}) {
+          g.write_tabbed("return ")
+        }
+        g.write_tabbed("${name}(") 
         mut wrap_argv := ""
         for arg in args {
           wrap_argv += "${g.mangle_ident(arg.name)}"
@@ -208,6 +233,8 @@ fn Generator.gen_program(checked_ast CheckedAST) {
   }
 
   g.gend_includes.writeln("#include <stdio.h>")
+  g.gend_includes.writeln("#include <stdarg.h>")
+  g.gend_includes.writeln("#include <raylib.h>")
 
   g.gend_main.writeln("int main(void) {\n\treturn ${g.mangle_ident("main")}();\n}")
 

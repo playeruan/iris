@@ -26,7 +26,9 @@ enum TokKind as u8 {
 
   identifier
 
+  t_any
   t_i32
+  t_u8
   t_f32
   t_void
   t_bool
@@ -64,6 +66,7 @@ enum TokKind as u8 {
   o_plusplus
   o_minusminus
   o_hash
+  o_ellipsis
 
   dot
   comma
@@ -95,6 +98,11 @@ enum TokKind as u8 {
   enum
 
   include
+
+  // directives
+  d_extname
+
+  invalid
 }
 
 fn (k TokKind) precedence() Precedence {
@@ -139,7 +147,9 @@ fn (k TokKind) get_decl_qualifier() DeclQualifier {
 
 fn Token.from_str(s string) ?TokKind {
   return match s {
+    "any"   {.t_any}
     "i32"   {.t_i32}
+    "u8"    {.t_u8}
     "f32"   {.t_f32}
     "void"  {.t_void}
     "bool"  {.t_bool}
@@ -176,6 +186,8 @@ fn Token.from_str(s string) ?TokKind {
     "++"    {.o_plusplus}
     "--"    {.o_minusminus}
     "#"     {.o_hash}
+    ".."    {.invalid}
+    "..."   {.o_ellipsis}
 
     "."     {.dot}
     ","     {.comma}
@@ -195,6 +207,8 @@ fn Token.from_str(s string) ?TokKind {
 
     "extern" {.dq_extern}
     "nexter" {.dq_extern} // hi nexter
+
+    "extname" {.d_extname}
 
     "ret"   {.ret}
     "if"    {.if}

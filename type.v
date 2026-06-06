@@ -20,20 +20,24 @@ fn (qs []TypeQualifier) str() string {
 enum BuiltinType as u8 {
   void
   i32
+  u8
   f32
   bool
   string
   type
+  any
 }
 
 fn BuiltinType.from_tok_kind(t TokKind) BuiltinType {
   return match t {
     .t_i32    {BuiltinType.i32}
+    .t_u8     {.u8}
     .t_f32    {.f32}
     .t_bool   {.bool}
     .t_void   {.void}
     .t_type   {.type}
     .t_string {.string}
+    .t_any    {.any}
     else      {
       panic("invalid TokKind ${t} to convert to BuiltinType")
     }
@@ -54,6 +58,7 @@ struct TypeFunc {
   qualifs []TypeQualifier
   arg_types []Type
   arg_names []string
+  variadic_type ?Type  // none if function is not variadic
   captured_names []string
   ret Type
 }
@@ -111,7 +116,11 @@ fn (t Type) str() string {
 				}
 			}
 
-      if t.arg_names.len == 0 {
+      if t.variadic_type != none {
+        s += ", ...${t.variadic_type}"
+      }
+
+      if t.arg_types.len == 0 {
         s += "void"
       }
 			s += ")"
@@ -199,9 +208,12 @@ fn join_types(a Type, b Type) ?Type {
 
   non_joinable := [BuiltinType.string, .void, .bool]
   if ua is TypePrimitive && ub is TypePrimitive {
+    if ua.type == .any {return ub}
+    if ub.type == .any {return ua}
     if non_joinable.contains(ua.type) || non_joinable.contains(ub.type) {
       return none
     }
+    return ub
     // TODO: handle other types in the future
   }
 

@@ -1,0 +1,2 @@
+
+extern printf: (fmt: string, ...any)
