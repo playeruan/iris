@@ -8,27 +8,24 @@ foo: (x: i32) -> i32 {
 main: () -> i32 {
 
   //test
-  init_window(900, 600, "test");
+  init_window(900, 800, "test");
   set_target_fps(60);
 
   printf("initialized window\n");
 
   set_window_monitor(0);
 
+  text: string = load_file_text("source.iris");
+
   while !window_should_close() {
     begin_drawing();
     clear_background(RAYWHITE);
-    draw_fps(10, 10);
-    if abs(get_mouse_delta().x) > 10 {
-      draw_text("text!!!", 400, 200, 50, BLACK);
-      hide_cursor();
-    } else {
-      show_cursor();
-    }
+    draw_text(text, 0, 0, 18, BLACK);
     end_drawing();
     printf("%f %f\n", get_frame_time(), get_time());
   }
 
+  unload_file_text(text);
   close_window();
 
   printf("closing window\n");
