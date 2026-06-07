@@ -302,8 +302,10 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
   match stmt {
     StmtExpr {c.check_expr(stmt.expr)} 
     StmtDeclVar {
-      if !stmt.sym.name.is_lower() {
+      if !stmt.sym.type.qualifs.contains(.const) && !stmt.sym.name.is_lower() {
         c.checker_error("variable names must be snake case (${stmt.sym.name} -> ${stmt.sym.name.camel_to_snake()})")
+      } else if stmt.sym.type.qualifs.contains(.const) && !stmt.sym.name.is_upper() {
+        c.checker_error("constant names must be upper case (${stmt.sym.name} -> ${stmt.sym.name.to_upper()})")
       }
       decl_t := c.resolve_type(stmt.sym.type)
       if decl_t is TypePrimitive && decl_t.type == .void {

@@ -69,6 +69,10 @@ fn (t BuiltinType) is_int() bool {
   return t.str().starts_with("i") || t.str().starts_with("u")
 }
 
+fn (t BuiltinType) is_float() bool {
+  return t.str().starts_with("f")
+}
+
 fn (t BuiltinType) is_unsigned() bool {
   assert(t.is_int())
   return t.str().starts_with("u")
@@ -262,6 +266,12 @@ fn join_types(a Type, b Type) ?Type {
       if ua.type.is_unsigned() != ub.type.is_unsigned() {
         // TODO: handle signedness
       }
+      if ua.type.size() >= ub.type.size() {
+        return ua
+      } else {
+        return ub
+      }
+    } else if ua.type.is_float() && ua.type.is_float() {
       if ua.type.size() >= ub.type.size() {
         return ua
       } else {

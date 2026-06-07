@@ -1,4 +1,22 @@
 
+extern struct Vector2 {
+  x: f32;
+  y: f32;
+}
+
+extern struct Vector3 {
+  x: f32;
+  y: f32;
+  z: f32;
+}
+
+extern struct Vector4 {
+  x: f32;
+  y: f32;
+  z: f32;
+  w: f32;
+}
+
 extern struct Color {
     r: u8; 
     g: u8; 
@@ -6,11 +24,60 @@ extern struct Color {
     a: u8; 
 }
 
-extern init_window: (w: i32, h: i32, title: string) #extname InitWindow
-extern set_target_fps: (fps: i32) #extname SetTargetFPS
-extern window_should_close: () -> bool #extname WindowShouldClose
+extern struct Rectangle {
+  x: f32;
+  y: f32;
+  w: f32;
+  h: f32;
+}
 
+LIGHTGRAY: const Color = Color( 200, 200, 200, 255 );
+GRAY: const Color = Color( 130, 130, 130, 255 );
+DARKGRAY: const Color = Color( 80, 80, 80, 255 );
+YELLOW: const Color = Color( 253, 249, 0, 255 );
+GOLD: const Color = Color( 255, 203, 0, 255 );
+ORANGE: const Color = Color( 255, 161, 0, 255 );
+PINK: const Color = Color( 255, 109, 194, 255 );
+RED: const Color = Color( 230, 41, 55, 255 );   
+MAROON: const Color = Color ( 190, 33, 55, 255 );
+GREEN: const Color = Color ( 0, 228, 48, 255 );
+LIME: const Color = Color ( 0, 158, 47, 255 );
+DARKGREEN: const Color = Color ( 0, 117, 44, 255 );
+SKYBLUE: const Color = Color ( 102, 191, 255, 255 );
+BLUE: const Color = Color ( 0, 121, 241, 255 );
+DARKBLUE: const Color = Color ( 0, 82, 172, 255 );
+PURPLE: const Color = Color ( 200, 122, 255, 255 );
+VIOLET: const Color = Color ( 135, 60, 190, 255 );
+DARKPURPLE: const Color = Color ( 112, 31, 126, 255 );
+BEIGE: const Color = Color ( 211, 176, 131, 255 );
+BROWN: const Color = Color ( 127, 106, 79, 255 );
+DARKBROWN: const Color = Color ( 76, 63, 47, 255 );
+WHITE: const Color = Color ( 255, 255, 255, 255 );
+BLACK: const Color = Color ( 0, 0, 0, 255 );
+BLANK: const Color = Color ( 0, 0, 0, 0 );
+MAGENTA: const Color = Color ( 255, 0, 255, 255 );
+RAYWHITE: const Color = Color ( 245, 245, 245, 255 );
+
+extern init_window: (w: i32, h: i32, title: string) #extname InitWindow
+extern close_window: () #extname CloseWindow
+extern window_should_close: () -> bool #extname WindowShouldClose
+extern toggle_fullscreen: () #extname ToggleFullscreen
+extern toggle_borderless_windowed: () #extname ToggleBorderlessWindowed
+extern minimize_window: () #extname MinimizeWindow
+extern maximize_window: () #extname MaximizeWindow
+extern set_window_monitor: (monitor: i32) #extname SetWindowMonitor
+extern get_screen_width: () -> i32 #extname GetScreenWidth
+extern get_screen_height: () -> i32 #extname GetScreenHeight
+
+extern clear_background: (color: Color) #extname ClearBackground
 extern begin_drawing: () #extname BeginDrawing
 extern end_drawing: () #extname EndDrawing
 
-extern clear_background: (color: Color) #extname ClearBackground
+extern set_target_fps: (fps: i32) #extname SetTargetFPS
+extern get_time: () -> f64 #extname GetTime
+extern get_frame_time: () -> f32 #extname GetFrameTime
+extern get_fps: () -> i32 #extname GetFPS
+
+extern draw_fps: (x: i32, y: i32) #extname DrawFPS
+
+

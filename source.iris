@@ -7,15 +7,14 @@ main: () -> i32 {
 
   printf("initialized window\n");
 
-  c: Color = Color(0, 255, 0, 255);
-  c.b = 255;
-
-  t: i8 = 127;
+  set_window_monitor(0);
 
   while !window_should_close() {
     begin_drawing();
-    clear_background(c);
+    clear_background(RAYWHITE);
+    draw_fps(10, 10);
     end_drawing();
+    printf("%lf\n", get_frame_time());
   }
 
   printf("closing window\n");

@@ -42,6 +42,7 @@ fn (mut g Generator) gen_type(t Type) string {
         .i32 {"int32_t"} 
         .u32 {"uint32_t"} 
         .f32 {"float"}
+        .f64 {"double"}
         .bool {"bool"}
         .string {"char*"}
         .void {"void"}
