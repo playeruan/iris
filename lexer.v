@@ -94,6 +94,12 @@ fn (mut l Lexer) lex_number() Token {
 	}
 }
 
+fn (mut l Lexer) skip_comment() {
+  for !l.is_at_end() && l.peek() != `\n` {
+    l.advance()
+  }
+}
+
 fn (mut l Lexer) lex_ident() Token {
 	start := l.pos
 	for !l.is_at_end() && (l.peek().is_alnum() || l.peek() == `_`) {
@@ -129,6 +135,11 @@ fn (mut l Lexer) next_tok() Token {
   }
 
   mut c := l.peek()
+  if c == `/` && l.peek_next() == `/` {
+    l.skip_comment()
+    l.skip_space()
+    c = l.peek()
+  }
 
   if c == `"` {
     return l.lex_string()

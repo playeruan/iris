@@ -107,6 +107,8 @@ enum TokKind as u8 {
   // directives
   d_extname
 
+  comment
+
   invalid
 }
 
@@ -228,7 +230,7 @@ fn Token.from_str(s string) ?TokKind {
     "while" {.while}
     "break" {.break}
     "continue" {.continue}
-    
+
     else {none}
   }
 }
