@@ -1,0 +1,35 @@
+include "bindings/libc.iris"
+
+struct LinkedListNode {
+    val: i32;
+    next: ^void;
+}
+
+ll_append: (ll: ^^LinkedListNode, val: i32) {
+    new_node: ^LinkedListNode = malloc(sizeof(LinkedListNode));
+    new_node..val = val;
+    new_node..next = nullptr;
+
+    if ^ll == nullptr {
+        ^ll = new_node;
+        ret;
+    }
+
+    curr: ^LinkedListNode = ^ll;
+    while curr..next != nullptr {
+        curr = curr..next;
+    }
+
+    curr..next = new_node@^void;
+}
+
+ll_delete: (ll: ^^LinkedListNode) {
+    if ll == nullptr || ^ll == nullptr { ret; }
+    if (^^ll).next == nullptr {
+        free(^ll);
+        ret;
+    }
+    ll_delete((&((^^ll).next))@^^LinkedListNode);
+    free(^ll);
+    ^ll = nullptr;
+}
