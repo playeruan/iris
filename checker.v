@@ -8,6 +8,7 @@ struct Checker {
   ret_type_stack []Type = []Type{}
   span Span
   result CheckedAST
+  loop_nesting i32
 }
 
 struct CheckedAST {
@@ -16,6 +17,7 @@ struct CheckedAST {
   table SymbolTable
   scopes map[i32]&Scope // map[id]&Scope
   casts_resolved map[i32]Type //map[id]Type
+  implicit_casts map[i32]Type //map[id]Type
 }
 
 @[noreturn]
@@ -454,21 +456,29 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
     }
 
     StmtAssign {
-      c.check_expr(stmt.assignee)
-      _ := c.check_expr(stmt.val)
-      // TODO: check types are coercible right to left
-
+      lt := c.check_expr(stmt.assignee)
+      rt := c.check_expr(stmt.val)
+      jt := join_types(lt, rt) or {c.checker_error("cannot cast between ${rt} and ${lt}")}
+      if jt != lt {
+        c.checker_error("cannot implicitly cast ${rt} to ${lt}")
+      }
     }
 
     StmtWhile {
+      c.loop_nesting++
       gt := c.check_expr(stmt.guard)
       if join_types(gt, TypePrimitive{type: .bool}) == none {
         c.checker_error("while guard should be of type bool")
       }
       c.check_stmt_block(stmt.block) 
+      c.loop_nesting--
     }
 
-    StmtContinue, StmtBreak {} //TODO: check if inside while or for
+    StmtContinue, StmtBreak {
+      if c.loop_nesting < 1 {
+        c.checker_error("continue and break may only be inside while and for loops")
+      }
+    }
 
     StmtInclude {}
 

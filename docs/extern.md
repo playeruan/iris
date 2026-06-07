@@ -11,7 +11,7 @@ An `extern` function is declared with this syntax
 extern foo: (x: i32) -> i32
 ```
 
-it cannot have a function body and it will be compiled so to call
+It cannot have a function body and it will be compiled so to call
 a function with the same name. if you want to override the external
 name (sometimes it's necessary due to iris's imposed name formatting)
 it's possible to use the `#extname` directive like this 
@@ -19,6 +19,18 @@ it's possible to use the `#extname` directive like this
 ```
 extern my_function: (x: i32) -> i32 #extname MyFunction
 ```
+
+`extern` functions (and only those as of now) can have a variadic
+number of arguments if declared with the following syntax 
+
+```
+extern my_variadic: (x: i32, ...i32)
+```
+
+The type after the ellipsis (`...`) may also be a special
+`any` type, which is only allowed in this context and 
+lets the variadic arguments be of any type. This feature
+was added for compatibility with libc's `printf` function.
 
 ### Structs
 

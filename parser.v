@@ -84,7 +84,7 @@ fn (mut p Parser) parse_primary() Expr {
       ExprLiteralPrimitive{
         type: TypePrimitive {
           qualifs: [.const]
-          type: .i32
+          type: BuiltinType.smallest_int(t.text.i64(), true)
         }
         value: LiteralValue{i64: t.text.i64()}
         id: p.next_id()

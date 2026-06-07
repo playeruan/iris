@@ -35,8 +35,12 @@ fn (mut g Generator) gen_type(t Type) string {
   return match t {
     TypePrimitive {
       match t.type {
-        .i32 {"int"} 
-        .u8  {"unsigned char"}
+        .i8 {"int8_t"} 
+        .u8 {"uint8_t"} 
+        .i16 {"int16_t"} 
+        .u16 {"uint16_t"} 
+        .i32 {"int32_t"} 
+        .u32 {"uint32_t"} 
         .f32 {"float"}
         .bool {"bool"}
         .string {"char*"}
@@ -66,9 +70,8 @@ fn (mut g Generator) gen_expr(e Expr) string {
       }
       ExprLiteralPrimitive {
         s := match e.type.type {
-          .i32 {e.value.i64.str()}
-          .u8  {e.value.i64.str()}
-          .f32 {e.value.f64.str()}
+          .i8, .u8, .i16, .u16, .i32, .u32 {e.value.i64.str()}
+          .f32, .f64 {e.value.f64.str()}
           .bool {e.value.bool.str()}
           .string {"\"${e.value.string}\""}
           .type {g.gen_error("unimplemented type type")}
@@ -239,6 +242,7 @@ fn Generator.gen_program(checked_ast CheckedAST) {
   }
 
   g.gend_includes.writeln("#include <stdio.h>")
+  g.gend_includes.writeln("#include <stdint.h>")
   g.gend_includes.writeln("#include <stdarg.h>")
   g.gend_includes.writeln("#include <raylib.h>")
 

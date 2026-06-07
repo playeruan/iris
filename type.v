@@ -19,9 +19,14 @@ fn (qs []TypeQualifier) str() string {
 
 enum BuiltinType as u8 {
   void
+  i8
+  i16
   i32
   u8 // TODO: implement this properly
+  u16
+  u32
   f32
+  f64
   bool
   string
   type
@@ -42,6 +47,41 @@ fn BuiltinType.from_tok_kind(t TokKind) BuiltinType {
       panic("invalid TokKind ${t} to convert to BuiltinType")
     }
   }
+}
+
+fn (t BuiltinType) size() i32 {
+  return match t {
+    .void, .string, .type, .any {0} // TODO: .string, .type, .any sizes
+    .i8, .u8, .bool {1}
+    .i16, .u16 {2}
+    .i32, .u32 {4}
+    .f32 {4}
+    .f64 {8}
+  }
+}
+
+fn (t BuiltinType) is_int() bool {
+  return t.str().starts_with("i") || t.str().starts_with("u")
+}
+
+fn (t BuiltinType) is_unsigned() bool {
+  assert(t.is_int())
+  return t.str().starts_with("u")
+}
+
+fn BuiltinType.smallest_int(from i64, unsigned bool) BuiltinType {
+  if unsigned {
+    assert(from < 1<<32)
+    if from < 1<<8  { return .u8  }
+    if from < 1<<16 { return .u16 }
+    if from < 1<<32 { return .u32 }
+  }
+  f_ := if from >= 0 {from} else {-from}
+  assert(f_ < 1<<31)
+  if f_ < 1<<7  { return .i8  }
+  if f_ < 1<<15 { return .i16 }
+  if f_ < 1<<31 { return .i32 }
+  return .void // invalid, unreachable
 }
 
 type Type = 
@@ -213,7 +253,16 @@ fn join_types(a Type, b Type) ?Type {
     if non_joinable.contains(ua.type) || non_joinable.contains(ub.type) {
       return none
     }
-    return ub
+    if ua.type.is_int() && ub.type.is_int() {
+      if ua.type.is_unsigned() != ub.type.is_unsigned() {
+        // TODO: handle signedness
+      }
+      if ua.type.size() >= ub.type.size() {
+        return ua
+      } else {
+        return ub
+      }
+    }
     // TODO: handle other types in the future
   }
 
