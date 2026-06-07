@@ -81,6 +81,8 @@ extern clear_background: (color: Color) #extname ClearBackground
 extern begin_drawing: () #extname BeginDrawing
 extern end_drawing: () #extname EndDrawing
 
+extern draw_text: (text: string, x: i32, y: i32, size: i32, color: Color) #extname DrawText
+
 // timing related functions
 
 extern set_target_fps: (fps: i32) #extname SetTargetFPS
