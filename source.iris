@@ -15,9 +15,6 @@ main: () -> i32 {
 
   set_window_monitor(0);
 
-  t: i16 = 3;
-  foo(t+255);
-
   while !window_should_close() {
     begin_drawing();
     clear_background(RAYWHITE);
