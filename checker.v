@@ -255,7 +255,7 @@ fn (mut c Checker) check_expr(expr Expr) Type {
         }
       }
       
-      if ["<", ">", ">=", "<=", "=="].contains(expr.op) {
+      if ["<", ">", ">=", "<=", "==", "!="].contains(expr.op) {
         TypePrimitive{type: .bool}
       } else {
         lt
