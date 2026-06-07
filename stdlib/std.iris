@@ -6,10 +6,8 @@ struct Arena {
   offset: u32;
 }
 
-arena: (cap: u32) -> ^Arena {
-  a: ^Arena = malloc(sizeof(Arena))@^Arena;
-  (^a).storage = malloc(cap);
-  (^a).offset = 0;
+arena: (cap: u32) -> Arena {
+  a: Arena = Arena(malloc(cap), cap, 0);
   ret a;
 }
 
@@ -22,7 +20,6 @@ aalloc: (a: ^Arena, s: u32) -> ^void {
   ret mem;
 }
 
-afree: (arena: ^Arena) {
-  free((^arena).storage);
-  free(arena);
+afree: (arena: Arena) {
+  free(arena.storage);
 }

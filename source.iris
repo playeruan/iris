@@ -1,10 +1,10 @@
 include "stdlib/std.iris"
 
 main: () -> i32 {
-  a: ^Arena = arena(sizeof(i32));
+  a: Arena = arena(sizeof(i32)*2);
   
-  x: ^i32 = aalloc(a, sizeof(i32))@^i32;
-  y: ^i32 = aalloc(a, sizeof(i32))@^i32;
+  x: ^i32 = aalloc(&a, sizeof(i32))@^i32;
+  y: ^i32 = aalloc(&a, sizeof(i32))@^i32;
   ^x = 2;
   ^y = 3;
 
