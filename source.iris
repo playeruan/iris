@@ -2,8 +2,5 @@ include "bindings/libc.iris"
 
 main: () -> i32 {
   
-  xs: []i32 = [2, 3, 5];
-  printf("%d\n", xs[1]);
-
-  ret 0;
+  
 }

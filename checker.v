@@ -179,8 +179,7 @@ fn (mut c Checker) check_expr(expr Expr) Type {
         req_t := sym.member_syms[i].type
         t := c.check_expr(expr.argv[i])
         j := join_types(t, req_t) or {
-          c.checker_error("cannot implicitly cast value of type ${t} \
-                          to ${req_t} for argument ${i+1}")
+          c.checker_error("cannot implicitly cast value of type ${t} to ${req_t} for argument ${i+1}")
         }
         c.result.implicit_casts[expr.argv[i].id] = j
       }
@@ -205,8 +204,7 @@ fn (mut c Checker) check_expr(expr Expr) Type {
             sym.type.variadic_type or {c.checker_error("unreachable (I hope)")}
           }
           j := join_types(t, req_t) or {
-            c.checker_error("cannot implicitly cast value of type ${t} \
-                          to ${req_t} for argument ${i+1}")
+            c.checker_error("cannot implicitly cast value of type ${t} to ${req_t} for argument ${i+1}")
           }
           if !are_types_equal(j, t) {
             c.result.implicit_casts[expr.argv[i].id] = j
@@ -360,8 +358,7 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
       vt := c.check_expr(stmt.value)
 
       j := join_types(decl_t, vt) or {
-        c.checker_error("cannot implicitly cast value of type ${vt} \
-                          to ${decl_t} for variable ${stmt.sym.name}")
+        c.checker_error("cannot implicitly cast value of type ${vt} to ${decl_t} for variable ${stmt.sym.name}")
       }
       if !are_types_equal(vt, j) && vt !is TypeArray {
         c.result.implicit_casts[stmt.value.id] = j
@@ -425,8 +422,7 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
       if stmt.default_value != none {
         vt := c.check_expr(stmt.default_value)
         j := join_types(decl_t, vt) or {
-          c.checker_error("cannot implicitly cast default value of type \
-                          ${vt} to ${decl_t} for member ${stmt.name}")
+          c.checker_error("cannot implicitly cast default value of type ${vt} to ${decl_t} for member ${stmt.name}")
         }
         if !are_types_equal(vt, j) {
           c.result.implicit_casts[stmt.default_value.id] = j
@@ -442,8 +438,7 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
       if stmt.override_value != none {
         vt := c.check_expr(stmt.override_value)
         j := join_types(TypePrimitive{type: .i32}, vt) or {
-          c.checker_error("cannot implicitly cast default value of type \
-                          ${vt} to const i32 for member ${stmt.name}")
+          c.checker_error("cannot implicitly cast default value of type ${vt} to const i32 for member ${stmt.name}")
         }
         if !are_types_equal(vt, j) {
           c.result.implicit_casts[stmt.override_value.id] = j
