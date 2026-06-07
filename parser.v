@@ -188,6 +188,18 @@ fn (mut p Parser) parse_primary() Expr {
         id: p.next_id()
       }
     }
+    .sizeof {
+      p.expect(.lparen)
+      es := ExprSizeof{
+        type: p.parse_type()
+        id: p.next_id()
+      }
+      p.expect(.rparen)
+      es
+    }
+    .nullptr {
+      ExprLiteralNullptr{id: p.next_id()}
+    }
     else {p.parse_error("invalid expr token of kind ${t.kind}")}
   }
 }
@@ -296,7 +308,7 @@ fn (mut p Parser) parse_stmt_expr() Stmt {
     return p.parse_decl(expr, []) 
   }
 
-  if p.peek().kind == .o_eq {
+  if [TokKind.o_eq, .o_pluseq, .o_minuseq, .o_stareq, .o_slasheq].contains(p.peek().kind) {
     return p.parse_assignment(expr)
   }
 
@@ -368,12 +380,13 @@ fn (mut p Parser) parse_decl(var_expr ExprVar, qualifs []DeclQualifier) Stmt {
 }
 
 fn (mut p Parser) parse_assignment(left Expr) StmtAssign {
-  p.expect(.o_eq)
+  op := p.advance()
   v := p.parse_expr(.literal)
   p.expect(.semicolon)
   return StmtAssign {
     assignee: left
     val: v
+    op: op.text
     span: p.span
     id: p.next_id()
   }

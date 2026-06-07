@@ -87,8 +87,10 @@ enum TokKind as u8 {
   lbrace
   rbrace
 
+  // type qualifs
   tq_const
 
+  // decl qualifs
   dq_extern
 
   ret
@@ -101,14 +103,15 @@ enum TokKind as u8 {
   continue
   struct
   enum
+  sizeof
+
+  nullptr
 
   include
 
   // directives
   d_extname
   d_link
-
-  comment
 
   invalid
 }
@@ -173,6 +176,8 @@ fn Token.from_str(s string) ?TokKind {
     "struct"{.struct}
     "enum"  {.enum}
     "include" {.include}
+    "sizeof" {.sizeof}
+    "nullptr" {.nullptr}
 
     "="     {.o_eq}
     "<"     {.o_lt}

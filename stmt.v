@@ -126,6 +126,7 @@ struct StmtBreak {
 
 struct StmtAssign {
   assignee Expr
+  op string
   val Expr
   span Span
   id i32

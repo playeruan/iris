@@ -1,0 +1,28 @@
+include "bindings/libc.iris"
+
+struct Arena {
+  storage: ^void;
+  capacity: u32;
+  offset: u32;
+}
+
+arena: (cap: u32) -> ^Arena {
+  a: ^Arena = malloc(sizeof(Arena))@^Arena;
+  (^a).storage = malloc(cap);
+  (^a).offset = 0;
+  ret a;
+}
+
+aalloc: (a: ^Arena, s: u32) -> ^void {
+  if (^a).offset + s > (^a).capacity {
+    ret nullptr;
+  }
+  mem: ^void = (^a).storage + (^a).offset;
+  (^a).offset += s;
+  ret mem;
+}
+
+afree: (arena: ^Arena) {
+  free((^arena).storage);
+  free(arena);
+}

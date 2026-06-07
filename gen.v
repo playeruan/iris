@@ -1,3 +1,4 @@
+
 module main
 
 import strings
@@ -74,6 +75,9 @@ fn (mut g Generator) gen_expr(e Expr) string {
       post = ")"
     }
     return pre + match e {
+      ExprLiteralNullptr {
+        "NULL"  
+      }
       ExprGroup {
         "(${g.gen_expr(e.inner)})"
       }
@@ -82,6 +86,14 @@ fn (mut g Generator) gen_expr(e Expr) string {
       }
       ExprDeref {
         "(*${g.gen_expr(e.inner)})"
+      }
+      ExprSizeof {
+        t := if e.id in g.checked_ast.resolved {g.checked_ast.resolved[e.id]} else {e.type}
+        match t {
+          TypePrimitive {t.type.size().str()}
+          TypeStruct {"sizeof(${g.gen_type(t)})"}
+          else {g.gen_error("not possible to get sizeof ${t}")}
+        }
       }
       ExprLiteralPrimitive {
         s := match e.type.type {
@@ -127,7 +139,7 @@ fn (mut g Generator) gen_expr(e Expr) string {
       }
       ExprVar {g.mangle_ident(e.name)}
       ExprType {g.gen_type(e.type)}
-      ExprCast {"((${g.gen_type(g.checked_ast.casts_resolved[e.id])})${g.gen_expr(e.castee)})"}
+      ExprCast {"((${g.gen_type(g.checked_ast.resolved[e.id])})${g.gen_expr(e.castee)})"}
       ExprBinary {"(${g.gen_expr(e.left)}${e.op}${g.gen_expr(e.right)})"}
       ExprUnary  {"(${e.op}${g.gen_expr(e.operand)})"}
       ExprIndex  {"${g.gen_expr(e.indexee)}[${g.gen_expr(e.idx)}]"}
@@ -233,7 +245,7 @@ fn (mut g Generator) gen_stmt(s Stmt) {
       g.gend_struct_decl.writeln("\t${g.mangle_ident(s.name)},")
     }
     StmtAssign {
-      g.writeln_tabbed("${g.gen_expr(s.assignee)} = ${g.gen_expr(s.val)};")
+      g.writeln_tabbed("${g.gen_expr(s.assignee)} ${s.op} ${g.gen_expr(s.val)};")
     }
     StmtInclude {}
     StmtWhile {

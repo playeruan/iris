@@ -16,7 +16,7 @@ struct CheckedAST {
   ast []Stmt
   table SymbolTable
   scopes map[i32]&Scope // map[id]&Scope
-  casts_resolved map[i32]Type //map[id]Type
+  resolved map[i32]Type //map[id]Type
   implicit_casts map[i32]Type //map[id]Type
 }
 
@@ -153,10 +153,20 @@ fn (mut c Checker) resolve_sym_types(s Symbol) Symbol {
 fn (mut c Checker) check_expr(expr Expr) Type {
   assert(expr.id != 0)
   return match expr {
+    ExprLiteralNullptr {TypePointer{inner: TypePrimitive{type: .void}}}
     ExprType {TypePrimitive{type: .type}}
     ExprLiteralPrimitive {expr.type} // no need to resolve because it's always known here
     ExprLiteralArray { if expr.argv.len > 0 {c.check_expr(expr.argv[0])} else {TypePrimitive{type: .void}} }
     ExprGroup {c.check_expr(expr.inner)}
+    ExprSizeof {
+      t := c.resolve_type(expr.type)
+      c.result.resolved[expr.id] = t
+      match t {
+        TypePrimitive, TypeStruct, TypeEnum {}
+        else {c.checker_error("cannot get sizeof ${t}")}
+      }
+      TypePrimitive{type: .u32}
+    }
     ExprLiteralStruct {
       if expr.type.name !in c.table.structs {
         c.checker_error("cannot create instance of undeclared type ${Type(expr.type)}")
@@ -223,15 +233,30 @@ fn (mut c Checker) check_expr(expr Expr) Type {
     ExprBinary {  
       lt := c.check_expr(expr.left)
       rt := c.check_expr(expr.right)
+      mut pointer_arith := false
+      if lt is TypePointer && rt is TypePrimitive && rt.type.is_int() {
+        pointer_arith = true
+        if expr.op != "+" {
+          c.checker_error("pointer arithmetic is only possible with + operator")
+        }
+      }
+
       j := join_types(lt, rt) or {
-        c.checker_error("cannot implicitly cast between types ${lt} and ${rt}")
+        if pointer_arith{
+          lt
+        } else {
+          c.checker_error("cannot implicitly cast between types ${lt} and ${rt}")
+        }
       }
-      if lt != j {
-        c.result.implicit_casts[expr.left.id] = j
+      if !pointer_arith{
+        if lt != j {
+          c.result.implicit_casts[expr.left.id] = j
+        }
+        if rt != j {
+          c.result.implicit_casts[expr.right.id] = j
+        }
       }
-      if rt != j {
-        c.result.implicit_casts[expr.right.id] = j
-      }
+      
       if ["<", ">", ">=", "<=", "=="].contains(expr.op) {
         TypePrimitive{type: .bool}
       } else {
@@ -288,7 +313,7 @@ fn (mut c Checker) check_expr(expr Expr) Type {
       if cast_types(what, c.resolve_type(expr.type)) == none {
         c.checker_error("cannot cast ${what} to ${expr.type}")
       }
-      c.result.casts_resolved[expr.id] = c.resolve_type(expr.type)
+      c.result.resolved[expr.id] = c.resolve_type(expr.type)
       c.resolve_type(expr.type)
     }
     //else {c.checker_error("unimplemented check_expr() for ${expr}")}

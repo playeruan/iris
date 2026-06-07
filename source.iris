@@ -1,35 +1,15 @@
-include "bindings/libc.iris"
-include "bindings/raylib.iris"
-
-foo: (x: i32) -> i32 {
-  ret x;
-}
+include "stdlib/std.iris"
 
 main: () -> i32 {
+  a: ^Arena = arena(sizeof(i32));
+  
+  x: ^i32 = aalloc(a, sizeof(i32))@^i32;
+  y: ^i32 = aalloc(a, sizeof(i32))@^i32;
+  ^x = 2;
+  ^y = 3;
 
-  //test
-  init_window(900, 800, "test");
-  set_target_fps(60);
+  printf("%d %d\n", ^x, ^y);
 
-  printf("initialized window\n");
-
-  set_window_monitor(0);
-
-  text: string = load_file_text("source.iris");
-
-  while !window_should_close() {
-    begin_drawing();
-    clear_background(RAYWHITE);
-    draw_text(text, 0, 0, 18, BLACK);
-    end_drawing();
-    printf("%f %f\n", get_frame_time(), get_time());
-  }
-
-  unload_file_text(text);
-  close_window();
-
-  printf("closing window\n");
-
+  afree(a);
   ret 0;
 }
-

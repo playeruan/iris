@@ -14,7 +14,7 @@ fn main() {
   generated := Generator.gen_program(c_ast)
 
   os.write_file("out.c", generated.text) or {panic("unable to write out.c")}
-  mut command := "clang out.c -Wall "
+  mut command := "clang -g out.c -Wall "
   for lib in generated.to_link {
     command += "-l${lib} "
   }

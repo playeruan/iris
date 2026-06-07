@@ -255,10 +255,12 @@ fn join_types(a Type, b Type) ?Type {
   ua := a.unqual()
   ub := b.unqual()  
 
+  if ua is TypePrimitive && ua.type == .any {return ub}
+  if ub is TypePrimitive && ub.type == .any {return ua}
+
   non_joinable := [BuiltinType.string, .void, .bool]
   if ua is TypePrimitive && ub is TypePrimitive {
-    if ua.type == .any {return ub}
-    if ub.type == .any {return ua}
+
     if non_joinable.contains(ua.type) || non_joinable.contains(ub.type) {
       return none
     }
@@ -279,6 +281,11 @@ fn join_types(a Type, b Type) ?Type {
       }
     }
     // TODO: handle other types in the future
+  }
+
+  if ua is TypePointer && ub is TypePointer {
+    if are_types_equal(ua.inner, TypePrimitive{type: .void}) {return ub}
+    if are_types_equal(ub.inner, TypePrimitive{type: .void}) {return ua}
   }
 
   return none
