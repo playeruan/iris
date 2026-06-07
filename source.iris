@@ -10,6 +10,8 @@ main: () -> i32 {
   c: Color = Color(0, 255, 0, 255);
   c.b = 255;
 
+  t: i8 = 127;
+
   while !window_should_close() {
     begin_drawing();
     clear_background(c);

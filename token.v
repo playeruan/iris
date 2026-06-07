@@ -28,8 +28,13 @@ enum TokKind as u8 {
 
   t_any
   t_i32
+  t_u32
+  t_i16
+  t_u16
+  t_i8
   t_u8
   t_f32
+  t_f64
   t_void
   t_bool
   t_string
@@ -149,8 +154,13 @@ fn Token.from_str(s string) ?TokKind {
   return match s {
     "any"   {.t_any}
     "i32"   {.t_i32}
+    "u32"   {.t_u32}
+    "i16"   {.t_i32}
+    "u16"   {.t_u16}
+    "i8"    {.t_i8}
     "u8"    {.t_u8}
     "f32"   {.t_f32}
+    "f64"   {.t_f64}
     "void"  {.t_void}
     "bool"  {.t_bool}
     "string"{.t_string}

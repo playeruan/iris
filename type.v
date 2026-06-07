@@ -36,8 +36,13 @@ enum BuiltinType as u8 {
 fn BuiltinType.from_tok_kind(t TokKind) BuiltinType {
   return match t {
     .t_i32    {BuiltinType.i32}
+    .t_u32    {.u32}
+    .t_i16    {.i16}
+    .t_u16    {.u16}
+    .t_i8     {.i8}
     .t_u8     {.u8}
     .t_f32    {.f32}
+    .t_f64    {.f64}
     .t_bool   {.bool}
     .t_void   {.void}
     .t_type   {.type}

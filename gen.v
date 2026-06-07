@@ -170,7 +170,6 @@ fn (mut g Generator) gen_stmt(s Stmt) {
       g.gend_fn_decl.writeln(declar+";")
       g.gend_main.writeln(declar + "\n{")
       if sym.qualifs.contains(.extern) {
-        dump(sym)
         name := sym.ext_name or {sym.name}
         g.tabs++
         if sym.type.ret != Type(TypePrimitive{type: .void}) {
