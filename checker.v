@@ -324,9 +324,12 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
       
       vt := c.check_expr(stmt.value)
 
-      if join_types(decl_t, vt) == none {
+      j := join_types(decl_t, vt) or {
         c.checker_error("cannot implicitly cast value of type ${vt} \
                           to ${decl_t} for variable ${stmt.sym.name}")
+      }
+      if !are_types_equal(vt, j) {
+        c.result.implicit_casts[stmt.value.id] = j
       }
       c.register_sym(c.resolve_sym_types(stmt.sym))
     }
@@ -386,9 +389,12 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
 
       if stmt.default_value != none {
         vt := c.check_expr(stmt.default_value)
-        if join_types(decl_t, vt) == none {
+        j := join_types(decl_t, vt) or {
           c.checker_error("cannot implicitly cast default value of type \
                           ${vt} to ${decl_t} for member ${stmt.name}")
+        }
+        if !are_types_equal(vt, j) {
+          c.result.implicit_casts[stmt.default_value.id] = j
         }
       }
     }
@@ -400,9 +406,12 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
 
       if stmt.override_value != none {
         vt := c.check_expr(stmt.override_value)
-        if join_types(TypePrimitive{type: .i32}, vt) == none {
+        j := join_types(TypePrimitive{type: .i32}, vt) or {
           c.checker_error("cannot implicitly cast default value of type \
                           ${vt} to const i32 for member ${stmt.name}")
+        }
+        if !are_types_equal(vt, j) {
+          c.result.implicit_casts[stmt.override_value.id] = j
         }
       }
     }
@@ -436,8 +445,12 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
     }
 
     StmtBranch {
-      if join_types(c.check_expr(stmt.if_guard), Type(TypePrimitive{type: .bool})) == none {
+      guard_t := c.check_expr(stmt.if_guard)
+      j := join_types(guard_t, Type(TypePrimitive{type: .bool})) or {
         c.checker_error("if and elif guards must be of type bool")
+      }
+      if !are_types_equal(guard_t, j) {
+        c.result.implicit_casts[stmt.if_guard.id] = j
       }
 
       c.check_stmt_block(stmt.if_block)
@@ -459,8 +472,11 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
       expr_t := c.check_expr(stmt.expr)
       if c.ret_type_stack.len > 0 {
         current_ret := c.ret_type_stack[c.ret_type_stack.len-1]
-        if join_types(current_ret, expr_t) == none { 
+        j := join_types(current_ret, expr_t) or { 
           c.checker_error("expected return of type ${current_ret} but got ${expr_t}")
+        }
+        if !are_types_equal(expr_t, j) {
+          c.result.implicit_casts[stmt.expr.id] = j
         }
       } else {
         c.checker_error("cannot return if not inside a function")
@@ -474,13 +490,19 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
       if jt != lt {
         c.checker_error("cannot implicitly cast ${rt} to ${lt}")
       }
+      if !are_types_equal(rt, jt) {
+        c.result.implicit_casts[stmt.val.id] = jt
+      }
     }
 
     StmtWhile {
       c.loop_nesting++
       gt := c.check_expr(stmt.guard)
-      if join_types(gt, TypePrimitive{type: .bool}) == none {
+      j := join_types(gt, TypePrimitive{type: .bool}) or {
         c.checker_error("while guard should be of type bool")
+      }
+      if !are_types_equal(gt, j) {
+        c.result.implicit_casts[stmt.guard.id] = j
       }
       c.check_stmt_block(stmt.block) 
       c.loop_nesting--
