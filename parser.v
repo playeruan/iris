@@ -611,6 +611,22 @@ fn (mut p Parser) parse_stmt() Stmt {
     .if     {p.parse_branch()}
     .else   {p.parse_error("standalone else statement")}
     .elif   {p.parse_error("standalone elif statement")}
+    .o_hash {
+      // directive
+      p.advance()
+      return match p.peek().kind {
+        .d_link {
+          p.advance()
+          StmtDirectiveLink {
+            lib: p.expect(.l_string).text
+            span: p.span
+            id: p.next_id()
+          }
+        }
+        else {p.parse_error("invalid directive ${p.peek().text}")}
+      }
+
+    }
     else {p.parse_stmt_expr()}
   }
 }

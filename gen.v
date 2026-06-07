@@ -11,6 +11,13 @@ struct Generator {
   gend_fn_decl strings.Builder
   gend_struct_decl strings.Builder
   gend_main strings.Builder
+
+  libs_to_link []string
+}
+
+struct GeneratorResult {
+  text string 
+  to_link []string
 }
 
 @[noreturn]
@@ -252,11 +259,16 @@ fn (mut g Generator) gen_stmt(s Stmt) {
       }
     }
     StmtFor {g.gen_error("unimplemented for")}
+    StmtDirectiveLink {
+      if s.lib !in g.libs_to_link {
+        g.libs_to_link << s.lib
+      }
+    }
     //else {g.gen_error("unimplemented stmt ${s}")}
   }
 }
 
-fn Generator.gen_program(checked_ast CheckedAST) {
+fn Generator.gen_program(checked_ast CheckedAST) GeneratorResult {
   mut g := Generator{checked_ast: checked_ast, current_scope: checked_ast.table.root_scope}
   for stmt in g.checked_ast.ast {
     g.gen_stmt(stmt)
@@ -270,8 +282,11 @@ fn Generator.gen_program(checked_ast CheckedAST) {
 
   g.gend_main.writeln("int main(void) {\n\treturn ${g.mangle_ident("main")}();\n}")
 
-  println("${g.gend_includes}")
-  println("// -- types --\n${g.gend_struct_decl}")
-  println("// -- fn decl --\n${g.gend_fn_decl}")
-  println("// -- program --\n${g.gend_main.str()}")
+  mut generated := ""
+  generated += g.gend_includes.str()
+  generated += "// -- types --\n${g.gend_struct_decl}"
+  generated += "// -- fn decl --\n${g.gend_fn_decl}"
+  generated += "// -- program --\n${g.gend_main.str()}"
+
+  return GeneratorResult {text: generated, to_link: g.libs_to_link}
 }

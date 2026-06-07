@@ -23,7 +23,8 @@ type Stmt =
   StmtDeclFunc | StmtDeclMember | StmtDeclStruct |
   StmtReturn | StmtContinue | StmtBreak |
   StmtBranch | StmtWhile | StmtFor | StmtAssign |
-  StmtDeclEnum | StmtDeclEnumMember | StmtInclude
+  StmtDeclEnum | StmtDeclEnumMember | StmtInclude |
+  StmtDirectiveLink
 
 struct StmtExpr {
   expr Expr
@@ -132,6 +133,12 @@ struct StmtAssign {
 
 struct StmtInclude {
   path string
+  span Span
+  id i32
+}
+
+struct StmtDirectiveLink {
+  lib string
   span Span
   id i32
 }

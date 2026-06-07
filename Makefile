@@ -1,8 +1,8 @@
 all:
 ifdef path
-	v run . $(path)
+	v run . $(path); ./out
 else
-	v run . > out.c; clang out.c -Wall -lraylib -o out; ./out
+	v run .; ./out
 endif
 
 clean:

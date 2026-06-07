@@ -106,6 +106,7 @@ enum TokKind as u8 {
 
   // directives
   d_extname
+  d_link
 
   comment
 
@@ -221,6 +222,7 @@ fn Token.from_str(s string) ?TokKind {
     "nexter" {.dq_extern} // hi nexter
 
     "extname" {.d_extname}
+    "link"    {.d_link}
 
     "ret"   {.ret}
     "if"    {.if}

@@ -521,6 +521,7 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
     }
 
     StmtInclude {}
+    StmtDirectiveLink {}
 
     else {c.checker_error("unimplemented check_stmt() for ${stmt}")}
   }

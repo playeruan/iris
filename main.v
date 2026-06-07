@@ -11,5 +11,13 @@ fn main() {
   ast := Parser.parse_program(toks, 0).ast
   //eprintln(ast)
   c_ast := Checker.check_program(ast)
-  Generator.gen_program(c_ast)
+  generated := Generator.gen_program(c_ast)
+
+  os.write_file("out.c", generated.text) or {panic("unable to write out.c")}
+  mut command := "clang out.c -Wall "
+  for lib in generated.to_link {
+    command += "-l${lib} "
+  }
+  command += "-o out"
+  os.execute_or_exit(command)
 }

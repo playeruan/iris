@@ -1,6 +1,4 @@
 
-## The extern keyword
-
 The extern keyword has similar meaning in all its current use cases
 
 ### Functions
