@@ -13,6 +13,12 @@ struct Parser {
   last_id i32
 }
 
+struct ParserResult {
+  mut: 
+  ast []Stmt
+  last_id i32
+}
+
 fn (mut p Parser) next_id() i32 {
   p.last_id++
   return p.last_id
@@ -588,8 +594,9 @@ fn (mut p Parser) parse_stmt() Stmt {
       }
 
       new_toks := Lexer.lex_file(path.text)
-      inserted_ast := Parser.parse_program(new_toks)
-      p.ast << inserted_ast 
+      inserted_result := Parser.parse_program(new_toks, p.next_id())
+      p.ast << inserted_result.ast
+      p.last_id = inserted_result.last_id
 
       StmtInclude{
         path: path.text
@@ -702,10 +709,10 @@ fn (mut p Parser) parse_func_type(qualifs []TypeQualifier) TypeFunc {
   }
 }
 
-fn Parser.parse_program(toks []Token) []Stmt {
-  mut p := Parser{toks: toks}
+fn Parser.parse_program(toks []Token, start_id int) ParserResult {
+  mut p := Parser{toks: toks, last_id: start_id}
   for p.peek().kind != .eof {
     p.ast << p.parse_stmt()
   }
-  return p.ast
+  return ParserResult{p.ast, p.last_id}
 }

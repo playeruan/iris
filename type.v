@@ -22,7 +22,7 @@ enum BuiltinType as u8 {
   i8
   i16
   i32
-  u8 // TODO: implement this properly
+  u8
   u16
   u32
   f32

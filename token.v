@@ -157,7 +157,7 @@ fn Token.from_str(s string) ?TokKind {
     "any"   {.t_any}
     "i32"   {.t_i32}
     "u32"   {.t_u32}
-    "i16"   {.t_i32}
+    "i16"   {.t_i16}
     "u16"   {.t_u16}
     "i8"    {.t_i8}
     "u8"    {.t_u8}

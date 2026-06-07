@@ -1,6 +1,10 @@
 include "bindings/libc.iris"
 include "bindings/raylib.iris"
 
+foo: (x: i32) -> i32 {
+  ret x;
+}
+
 main: () -> i32 {
 
   //test
@@ -10,6 +14,9 @@ main: () -> i32 {
   printf("initialized window\n");
 
   set_window_monitor(0);
+
+  t: i16 = 3;
+  foo(t+255);
 
   while !window_should_close() {
     begin_drawing();

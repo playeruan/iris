@@ -168,10 +168,11 @@ fn (mut c Checker) check_expr(expr Expr) Type {
       for i := 0; i < expr.argv.len; i++ {
         req_t := sym.member_syms[i].type
         t := c.check_expr(expr.argv[i])
-        if join_types(t, req_t) == none {
-        c.checker_error("cannot implicitly cast value of type ${t} \
+        j := join_types(t, req_t) or {
+          c.checker_error("cannot implicitly cast value of type ${t} \
                           to ${req_t} for argument ${i+1}")
         }
+        c.result.implicit_casts[expr.argv[i].id] = j
       }
       expr.type
     }
@@ -193,9 +194,12 @@ fn (mut c Checker) check_expr(expr Expr) Type {
           } else {
             sym.type.variadic_type or {c.checker_error("unreachable (I hope)")}
           }
-          if join_types(t, req_t) == none {
-          c.checker_error("cannot implicitly cast value of type ${t} \
+          j := join_types(t, req_t) or {
+            c.checker_error("cannot implicitly cast value of type ${t} \
                           to ${req_t} for argument ${i+1}")
+          }
+          if !are_types_equal(j, t) {
+            c.result.implicit_casts[expr.argv[i].id] = j
           }
         }
         callee_typ.ret
@@ -219,8 +223,14 @@ fn (mut c Checker) check_expr(expr Expr) Type {
     ExprBinary {  
       lt := c.check_expr(expr.left)
       rt := c.check_expr(expr.right)
-      if join_types(lt, rt) == none {
+      j := join_types(lt, rt) or {
         c.checker_error("cannot implicitly cast between types ${lt} and ${rt}")
+      }
+      if lt != j {
+        c.result.implicit_casts[expr.left.id] = j
+      }
+      if rt != j {
+        c.result.implicit_casts[expr.right.id] = j
       }
       if ["<", ">", ">=", "<=", "=="].contains(expr.op) {
         TypePrimitive{type: .bool}

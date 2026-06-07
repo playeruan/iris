@@ -59,7 +59,14 @@ fn (mut g Generator) gen_type(t Type) string {
 
 fn (mut g Generator) gen_expr(e Expr) string {
   unsafe {
-    return match e {
+    mut pre := ""
+    mut post := ""
+    if e.id in g.checked_ast.implicit_casts {
+      t := g.gen_type(g.checked_ast.implicit_casts[e.id])
+      pre = "((${t})"
+      post = ")"
+    }
+    return pre + match e {
       ExprGroup {
         "(${g.gen_expr(e.inner)})"
       }
@@ -118,7 +125,7 @@ fn (mut g Generator) gen_expr(e Expr) string {
       ExprUnary  {"(${e.op}${g.gen_expr(e.operand)})"}
       ExprIndex  {"${g.gen_expr(e.indexee)}[${g.gen_expr(e.idx)}]"}
       ExprAccess {"${g.gen_expr(e.accessee)}.${e.member.name}"}
-    }
+    } + post
   }
 }
 
