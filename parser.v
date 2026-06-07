@@ -547,7 +547,7 @@ fn (mut p Parser) parse_stmt() Stmt {
       r := StmtReturn{
         expr: 
           if p.peek().kind == .semicolon {
-            ExprLiteralPrimitive{type: TypePrimitive{type: .void}}
+            ExprLiteralPrimitive{type: TypePrimitive{type: .void}, id: p.next_id()}
           } else {
             p.parse_expr(.literal)
           }
