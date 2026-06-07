@@ -358,8 +358,22 @@ fn (mut p Parser) parse_decl(var_expr ExprVar, qualifs []DeclQualifier) Stmt {
 
     if p.peek().kind == .lbrace{
       b = p.parse_block()
+    } else if p.peek().kind == .o_eq {
+      p.expect(.o_eq)
+      f_val := p.parse_expr(.literal)
+      p.expect(.semicolon)
+      return StmtDeclVar {
+        sym: SymbolVar {
+          qualifs: qualifs
+          name: var_expr.name
+          type: typ
+        }    
+        value: f_val 
+        span: p.span
+        id: p.next_id()
+      }
     } else if !qualifs.contains(.extern) {
-      p.parse_error("non-extern function declarations must have a body")
+      p.parse_error("expected left brace or = after function type symbol definition")
     }
 
     mut arg_symbols := []Symbol{}
