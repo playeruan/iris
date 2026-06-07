@@ -1,13 +1,9 @@
-include "std/arena.iris"
+include "bindings/libc.iris"
 
 main: () -> i32 {
-  a: Arena = arena(sizeof(i32)*16);
   
-  xp: ^i32 = aalloc(&a, sizeof(i32))@^i32;
-  ^xp = 100;
+  xs: []i32 = [2, 3, 5];
+  printf("%d\n", xs[1]);
 
-  printf("%d\n", ^xp);
-
-  afree(a);
   ret 0;
 }

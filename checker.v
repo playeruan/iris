@@ -156,7 +156,7 @@ fn (mut c Checker) check_expr(expr Expr) Type {
     ExprLiteralNullptr {TypePointer{inner: TypePrimitive{type: .void}}}
     ExprType {TypePrimitive{type: .type}}
     ExprLiteralPrimitive {expr.type} // no need to resolve because it's always known here
-    ExprLiteralArray { if expr.argv.len > 0 {c.check_expr(expr.argv[0])} else {TypePrimitive{type: .void}} }
+    ExprLiteralArray { if expr.argv.len > 0 {TypeArray{inner: c.check_expr(expr.argv[0])}} else {TypeArray{inner: TypePrimitive{type: .void}}} }
     ExprGroup {c.check_expr(expr.inner)}
     ExprSizeof {
       t := c.resolve_type(expr.type)
@@ -352,14 +352,18 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
           c.checker_error("type any can only be used for variadic function arguments")
         }
       }
-      
+
+      if decl_t is TypeFunc {
+        c.checker_error("function type variables are not yet implemented")
+      }
+
       vt := c.check_expr(stmt.value)
 
       j := join_types(decl_t, vt) or {
         c.checker_error("cannot implicitly cast value of type ${vt} \
                           to ${decl_t} for variable ${stmt.sym.name}")
       }
-      if !are_types_equal(vt, j) {
+      if !are_types_equal(vt, j) && vt !is TypeArray {
         c.result.implicit_casts[stmt.value.id] = j
       }
       c.register_sym(c.resolve_sym_types(stmt.sym))

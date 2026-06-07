@@ -283,6 +283,11 @@ fn join_types(a Type, b Type) ?Type {
     // TODO: handle other types in the future
   }
 
+  if ua is TypeArray && ub is TypeArray {
+    j := join_types(ua.inner, ub.inner) or {return none}
+    return TypeArray{inner: j}
+  }
+
   if ua is TypePointer && ub is TypePointer {
     if are_types_equal(ua.inner, TypePrimitive{type: .void}) {return ub}
     if are_types_equal(ub.inner, TypePrimitive{type: .void}) {return ua}
