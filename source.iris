@@ -1,14 +1,12 @@
-include "stdlib/std.iris"
+include "std/arena.iris"
 
 main: () -> i32 {
-  a: Arena = arena(sizeof(i32)*2);
+  a: Arena = arena(sizeof(i32)*16);
   
-  x: ^i32 = aalloc(&a, sizeof(i32))@^i32;
-  y: ^i32 = aalloc(&a, sizeof(i32))@^i32;
-  ^x = 2;
-  ^y = 3;
+  xp: ^i32 = aalloc(&a, sizeof(i32))@^i32;
+  ^xp = 100;
 
-  printf("%d %d\n", ^x, ^y);
+  printf("%d\n", ^xp);
 
   afree(a);
   ret 0;

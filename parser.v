@@ -11,12 +11,14 @@ struct Parser {
   pos u32
   span Span
   last_id i32
+  parsed_files []string
 }
 
 struct ParserResult {
   mut: 
   ast []Stmt
   last_id i32
+  parsed_files []string
 }
 
 fn (mut p Parser) next_id() i32 {
@@ -253,7 +255,24 @@ fn (mut p Parser) parse_expr(pr Precedence) Expr {
       .dot {
         ident := p.expect(.identifier)
         ExprAccess{
-          accessee: expr, member: ExprVar{name: ident.text}
+          accessee: expr, member: ExprVar{
+            name: ident.text
+            id: p.next_id()
+          }
+          id: p.next_id()
+        }
+      }
+      .dotdot {
+        ident := p.expect(.identifier) 
+        ExprAccess {
+          accessee: ExprDeref {
+            inner: expr
+            id: p.next_id()
+          }
+          member: ExprVar {
+            name: ident.text
+            id: p.next_id()
+          }
           id: p.next_id()
         }
       }
@@ -604,14 +623,25 @@ fn (mut p Parser) parse_stmt() Stmt {
         p.parse_error("recursive include statements are not allowed") 
       }
 
+      if path.text in p.parsed_files {
+        p.parse_warning("skipping already included file ${path.text}")
+        return StmtInclude{
+          path: path.text
+          span: p.span
+          id: p.next_id()
+        }  
+      }
+
       if !os.exists(path.text) {
         p.parse_error("imported file ${path.text} does not exist")
       }
 
       new_toks := Lexer.lex_file(path.text)
-      inserted_result := Parser.parse_program(new_toks, p.next_id())
+      p.parsed_files << path.text
+      inserted_result := Parser.parse_program(new_toks, p.next_id(), p.parsed_files)
       p.ast << inserted_result.ast
       p.last_id = inserted_result.last_id
+      p.parsed_files = inserted_result.parsed_files
 
       StmtInclude{
         path: path.text
@@ -740,10 +770,11 @@ fn (mut p Parser) parse_func_type(qualifs []TypeQualifier) TypeFunc {
   }
 }
 
-fn Parser.parse_program(toks []Token, start_id int) ParserResult {
+fn Parser.parse_program(toks []Token, start_id int, parsed_files []string) ParserResult {
   mut p := Parser{toks: toks, last_id: start_id}
+  p.parsed_files << parsed_files 
   for p.peek().kind != .eof {
     p.ast << p.parse_stmt()
   }
-  return ParserResult{p.ast, p.last_id}
+  return ParserResult{p.ast, p.last_id, p.parsed_files}
 }

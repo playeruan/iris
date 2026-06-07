@@ -8,7 +8,7 @@ fn main() {
 
   toks := Lexer.lex_file(path)
   //eprintln(toks)
-  ast := Parser.parse_program(toks, 0).ast
+  ast := Parser.parse_program(toks, 0, [path]).ast
   //eprintln(ast)
   c_ast := Checker.check_program(ast)
   generated := Generator.gen_program(c_ast)
