@@ -421,6 +421,8 @@ fn (mut p Parser) parse_branch() StmtBranch {
     elif_guards: if elif_gs.len > 0 {elif_gs} else {none}
     elif_blocks: if elif_bs.len > 0 {elif_bs} else {none}
     else_block: else_b
+    span: p.span
+    id: p.next_id()
   }
 }
 

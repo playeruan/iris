@@ -235,7 +235,21 @@ fn (mut g Generator) gen_stmt(s Stmt) {
       g.writeln_tabbed("}")
     }
     StmtBranch {
-      g.gen_error("unimplemented branch")
+      g.writeln_tabbed("if (${g.gen_expr(s.if_guard)}) {")
+      g.gen_stmt(s.if_block)
+      g.writeln_tabbed("}")
+      if s.elif_guards != none && s.elif_blocks != none {
+        for i := 0; i < s.elif_guards.len ; i++ {
+          g.writeln_tabbed("else if (${g.gen_expr(s.elif_guards[i])}) {")
+          g.gen_stmt(s.elif_blocks[i])
+          g.writeln_tabbed("}")
+        }
+      }
+      if s.else_block != none {
+        g.writeln_tabbed("else {")
+        g.gen_stmt(s.else_block)
+        g.writeln_tabbed("}")
+      }
     }
     StmtFor {g.gen_error("unimplemented for")}
     //else {g.gen_error("unimplemented stmt ${s}")}
@@ -250,7 +264,8 @@ fn Generator.gen_program(checked_ast CheckedAST) {
 
   g.gend_includes.writeln("#include <stdio.h>")
   g.gend_includes.writeln("#include <stdint.h>")
-  g.gend_includes.writeln("#include <stdarg.h>")
+  g.gend_includes.writeln("#include <stdlib.h>")
+  g.gend_includes.writeln("#include <math.h>")
   g.gend_includes.writeln("#include <raylib.h>")
 
   g.gend_main.writeln("int main(void) {\n\treturn ${g.mangle_ident("main")}();\n}")

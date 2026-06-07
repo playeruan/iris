@@ -19,7 +19,12 @@ main: () -> i32 {
     begin_drawing();
     clear_background(RAYWHITE);
     draw_fps(10, 10);
-    draw_text("text!!!", 400, 200, 50, BLACK);
+    if abs(get_mouse_delta().x) > 10 {
+      draw_text("text!!!", 400, 200, 50, BLACK);
+      hide_cursor();
+    } else {
+      show_cursor();
+    }
     end_drawing();
     printf("%f %f\n", get_frame_time(), get_time());
   }

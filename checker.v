@@ -153,7 +153,7 @@ fn (mut c Checker) resolve_sym_types(s Symbol) Symbol {
 fn (mut c Checker) check_expr(expr Expr) Type {
   assert(expr.id != 0)
   return match expr {
-    ExprType {c.resolve_type(expr.type)}
+    ExprType {TypePrimitive{type: .type}}
     ExprLiteralPrimitive {expr.type} // no need to resolve because it's always known here
     ExprLiteralArray { if expr.argv.len > 0 {c.check_expr(expr.argv[0])} else {TypePrimitive{type: .void}} }
     ExprGroup {c.check_expr(expr.inner)}
@@ -307,7 +307,9 @@ fn (mut c Checker) check_stmt_block(block StmtBlock) {
 }
 
 fn (mut c Checker) check_stmt(stmt Stmt) {
-  assert(stmt.id != 0)
+  if stmt.id == 0 {
+    c.checker_error("statement ${stmt} at has ID 0")
+  }
   c.span = stmt.span
   match stmt {
     StmtExpr {c.check_expr(stmt.expr)} 
@@ -318,8 +320,12 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
         c.checker_error("constant names must be upper case (${stmt.sym.name} -> ${stmt.sym.name.to_upper()})")
       }
       decl_t := c.resolve_type(stmt.sym.type)
-      if decl_t is TypePrimitive && decl_t.type == .void {
-        c.checker_error("cannot declare variable ${stmt.sym.name} of type void")
+      if decl_t is TypePrimitive {
+        if decl_t.type == .void {
+          c.checker_error("cannot declare variable ${stmt.sym.name} of type void")
+        } else if decl_t.type == .any {
+          c.checker_error("type any can only be used for variadic function arguments")
+        }
       }
       
       vt := c.check_expr(stmt.value)

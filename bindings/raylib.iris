@@ -94,4 +94,17 @@ extern get_fps: () -> i32 #extname GetFPS
 
 extern draw_fps: (x: i32, y: i32) #extname DrawFPS
 
+// cursor
+
+extern show_cursor: () #extname ShowCursor
+extern hide_cursor: () #extname HideCursor
+
+// mouse
+
+extern get_mouse_x: () -> i32 #extname GetMouseX
+extern get_mouse_y: () -> i32 #extname GetMouseY
+extern get_mouse_position: () -> Vector2 #extname GetMousePosition
+extern get_mouse_delta: () -> Vector2 #extname GetMouseDelta
+extern set_mouse_position: (x: i32, y: i32) #extname SetMousePosition
+
 
