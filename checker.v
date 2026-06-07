@@ -372,6 +372,9 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
       if !stmt.sym.name.is_lower() {
         c.checker_error("function names must be snake case (${stmt.sym.name} -> ${stmt.sym.name.camel_to_snake()})")
       }
+
+      c.register_sym(c.resolve_sym_types(stmt.sym))
+
       c.push_scope(&stmt)
 
       func_t := stmt.sym.type as TypeFunc
@@ -409,7 +412,6 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
 
       c.ret_type_stack.pop()
 
-      c.register_sym(c.resolve_sym_types(stmt.sym))
     }
 
     StmtDeclMember {
@@ -449,6 +451,9 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
     }
 
     StmtDeclStruct {
+
+      c.table.structs[stmt.sym.name] = c.resolve_sym_types(stmt.sym) as SymbolStruct
+
       if c.current_scope.parent != none {
         c.checker_error("structs can only be declared in the global scope")
       }
@@ -461,7 +466,6 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
         c.check_stmt(m)
       }
 
-      c.table.structs[stmt.sym.name] = c.resolve_sym_types(stmt.sym) as SymbolStruct
     }
 
     StmtDeclEnum {
