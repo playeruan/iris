@@ -1,6 +1,8 @@
 include "bindings/libc.iris"
 
 main: () -> i32 {
-  
-  
+  xs: ^i32 = malloc(sizeof(i32)*8);
+  xs[3] = 2;
+  printf("%d\n", xs[3]);
+  ret 0;  
 }

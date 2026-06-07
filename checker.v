@@ -290,6 +290,8 @@ fn (mut c Checker) check_expr(expr Expr) Type {
       lt := c.check_expr(expr.indexee)
       if lt is TypeArray {
         lt.inner
+      } else if lt is TypePointer {
+        lt.inner
       } else {
         c.checker_error("cannot index from non-array type ${lt}")
       }
