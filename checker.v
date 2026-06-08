@@ -263,12 +263,11 @@ fn (mut c Checker) check_expr(expr Expr) Type {
             if req_t.name in to_collapse {
               collapsed := to_collapse[req_t.name] or {panic("wtf")}
               if !are_types_equal(collapsed, t) {
-                c.checker_error("all arguments of generic type ${req_t.name} must have the same type. expected ${collapsed}, got ${t}") 
+                c.checker_error("all arguments of generic type ${req_t.name} must have the same type. expected ${t}, got ${t}") 
               }
             } else {
               to_collapse[req_t.name] = t
             }
-            eprintln("${req_t.name} -> ${t}")
             ungenericed_req_t  = t
           }
 

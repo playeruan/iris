@@ -249,6 +249,15 @@ fn (t Type) unqual() Type {
   }
 }
 
+fn (t Type) is_generic() bool {
+  return match t {
+    TypeGeneric {true}
+    TypePointer {t.inner.is_generic()}
+    TypeArray {t.inner.is_generic()}
+    else {false}
+  }
+}
+
 fn (t Type) collapse_generic(gen_name string, type Type) Type {
   return match t {
     TypeUnresolved, TypePrimitive, TypeEnum, TypePointer, TypeArray {

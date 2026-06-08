@@ -3,6 +3,11 @@ include "bindings/libc.iris"
 generic T
 foo: (x: T, y: T) -> T {ret x;}
 
+generic T 
+struct Arr {
+  data: ^T;
+}
+
 main: () -> i32 {
   printf("%d\n", foo(2, 3)+2);
   ret 0;
