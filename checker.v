@@ -451,7 +451,7 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
     }
 
     StmtDeclStruct {
-
+      
       c.table.structs[stmt.sym.name] = c.resolve_sym_types(stmt.sym) as SymbolStruct
 
       if c.current_scope.parent != none {
@@ -565,12 +565,13 @@ fn Checker.check_program(ast []Stmt) CheckedAST {
     }
   }
 
-  c.result.table = c.table
 
   c.current_scope = c.table.root_scope
   for stmt in ast {
     c.check_stmt(stmt)
   }
+
+  c.result.table = c.table
 
   return c.result
 }

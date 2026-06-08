@@ -229,18 +229,20 @@ fn (mut g Generator) gen_stmt(s Stmt) {
     StmtContinue  {g.writeln_tabbed("continue;")}
     StmtBreak     {g.writeln_tabbed("break;")}
     StmtDeclStruct {
+      resolved_sym := g.checked_ast.table.structs[s.sym.name] or {g.gen_error("couldn't find struct ${s.sym.name} in symtable")}
       if s.sym.qualifs.contains(.extern) {
         g.gend_struct_decl.writeln("#define ${g.mangle_ident(s.sym.name)} ${s.sym.name}")
         return
       }
       g.gend_struct_decl.writeln("struct ${g.mangle_ident(s.sym.name)} {")
-      for m in s.members {
-        g.gen_stmt(m)
+      for m in resolved_sym.member_syms {
+        g.gend_struct_decl.writeln("\t${g.gen_type_left(m.type)} ${m.name};")
       }
       g.gend_struct_decl.writeln("};\n")
     }
     StmtDeclMember {
-      g.gend_struct_decl.writeln("\t${g.gen_type_left(s.type)} ${s.name};")
+      g.gen_error("unrechable")
+      //g.gend_struct_decl.writeln("\t${g.gen_type_left(s.type)} ${s.name};")
     }
     StmtDeclEnum {
       g.gend_struct_decl.writeln("enum ${g.mangle_ident(s.sym.name)} {")

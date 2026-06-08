@@ -1,29 +1,4 @@
-include "bindings/libc.iris"
-
-DICT_STARTING_SIZE: const i32 = 64;
-
-struct LinkedListNode {
-    val: i32;
-    next: ^void;
-}
-
-ll_append: (ll: ^^LinkedListNode, val: i32) {
-    new_node: ^LinkedListNode = malloc(sizeof(LinkedListNode));
-    new_node..val = val;
-    new_node..next = nullptr;
-
-    if ^ll == nullptr {
-        ^ll = new_node;
-        ret;
-    }
-
-    curr: ^LinkedListNode = ^ll;
-    while curr..next != nullptr {
-        curr = curr..next;
-    }
-
-    curr..next = new_node;
-}
+include "std/linkedlist.iris"
 
 main: () -> i32 {
     ll: ^LinkedListNode = nullptr;
@@ -31,13 +6,16 @@ main: () -> i32 {
     ll_append(&ll, 420);
     ll_append(&ll, 1337);
     ll_append(&ll, 69420);
-    ll_append(&ll, 271000);
-    ll_append(&ll, 6000000);
 
-    while ll != nullptr {
-        printf("%d\n", ll..val);
-        ll = ll..next;
+    node: ^LinkedListNode = ll;
+    while node != nullptr {
+        printf("%d\n", node..val);
+        node = node..next;
     }
+
+    ll_delete(&ll);
+
+    printf("%p\n", ll);
   
     ret 0;
 }

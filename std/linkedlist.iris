@@ -2,7 +2,7 @@ include "bindings/libc.iris"
 
 struct LinkedListNode {
     val: i32;
-    next: ^void;
+    next: ^LinkedListNode;
 }
 
 ll_append: (ll: ^^LinkedListNode, val: i32) {

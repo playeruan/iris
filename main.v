@@ -11,6 +11,7 @@ fn main() {
   ast := Parser.parse_program(toks, 0, [path]).ast
   //eprintln(ast)
   c_ast := Checker.check_program(ast)
+  //eprintln(c_ast.table)
   generated := Generator.gen_program(c_ast)
 
   os.write_file("out.c", generated.text) or {panic("unable to write out.c")}
