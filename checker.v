@@ -10,6 +10,7 @@ struct Checker {
   span Span
   result CheckedAST
   loop_nesting i32
+  last_id i32
 }
 
 struct CheckedAST {
@@ -20,13 +21,21 @@ struct CheckedAST {
   resolved map[i32]Type //map[id]Type
   implicit_casts map[i32]Type //map[id]Type
   generic_decls map[i32]Stmt //map[id]Decl
+  func_name_to_decl map[string]StmtDeclFunc //map[name]Decl
   monomorph_decls []Stmt //[]Decl
+  resolved_calls map[i32]string // map[expr_call_id]mangled_name
 }
 
 @[noreturn]
 fn (c Checker) checker_error(s string) {
   eprintln("${c.span} Checker Error -> \"${s}\"")
 	exit(1)
+}
+
+
+fn (mut c Checker) next_id() i32 {
+  c.last_id++
+  return c.last_id
 }
 
 fn (mut c Checker) push_scope(stmt &Stmt) {
@@ -153,7 +162,7 @@ fn (mut c Checker) resolve_sym_types(s Symbol) Symbol {
   }
 }
 
-fn (mut c Checker) collapse_sym_generics(s Symbol, gen_name string, type Type) Symbol {
+fn (mut c Checker) collapse_sym_generic (s Symbol, gen_name string, type Type) Symbol {
   return match s {
     SymbolVar {
       SymbolVar {
@@ -168,7 +177,7 @@ fn (mut c Checker) collapse_sym_generics(s Symbol, gen_name string, type Type) S
         name: s.name
         ext_name: s.ext_name
         type: s.type.collapse_generic(gen_name, type.unqual())
-        arg_syms: s.arg_syms.map(c.collapse_sym_generics(it, gen_name, type.unqual()))
+        arg_syms: s.arg_syms.map(c.collapse_sym_generic(it, gen_name, type.unqual()))
       }
     }
     SymbolStruct {
@@ -176,7 +185,7 @@ fn (mut c Checker) collapse_sym_generics(s Symbol, gen_name string, type Type) S
         qualifs: s.qualifs 
         name: s.name
         type: s.type.collapse_generic(gen_name, type.unqual())
-        member_syms: s.member_syms.map(c.collapse_sym_generics(it, gen_name, type.unqual()))
+        member_syms: s.member_syms.map(c.collapse_sym_generic(it, gen_name, type.unqual()))
       }
     }
     SymbolEnum {
@@ -184,7 +193,7 @@ fn (mut c Checker) collapse_sym_generics(s Symbol, gen_name string, type Type) S
         qualifs: s.qualifs 
         name: s.name
         type: s.type.collapse_generic(gen_name, type.unqual())
-        member_syms: s.member_syms.map(c.collapse_sym_generics(it, gen_name, type.unqual()))
+        member_syms: s.member_syms.map(c.collapse_sym_generic(it, gen_name, type.unqual()))
       }
     }
   }
@@ -238,6 +247,9 @@ fn (mut c Checker) check_expr(expr Expr) Type {
         sym := c.table.root_scope.lookup_sym(expr.callee.name) or {
           c.checker_error("calling undeclared function ${expr.callee.name}")
         }
+
+        mut to_collapse := map[string]Type{}
+
         for i := 0; i < expr.argv.len; i++ {
           t := c.check_expr(expr.argv[i])
           req_t := if i < sym.arg_syms.len {
@@ -246,21 +258,63 @@ fn (mut c Checker) check_expr(expr Expr) Type {
             sym.type.variadic_type or {c.checker_error("unreachable (I hope)")}
           }
 
+          mut ungenericed_req_t := req_t
           if req_t is TypeGeneric {
-            c.result.monomorph_decls << StmtDeclFunc {
-              sym: c.collapse_sym_generics(sym, req_t.name, t)
+            if req_t.name in to_collapse {
+              collapsed := to_collapse[req_t.name] or {panic("wtf")}
+              if !are_types_equal(collapsed, t) {
+                c.checker_error("all arguments of generic type ${req_t.name} must have the same type. expected ${collapsed}, got ${t}") 
+              }
+            } else {
+              to_collapse[req_t.name] = t
             }
-            dump(c.result.monomorph_decls)
+            eprintln("${req_t.name} -> ${t}")
+            ungenericed_req_t  = t
           }
 
-          j := join_types(t, req_t) or {
-            c.checker_error("cannot implicitly cast value of type ${t} to ${req_t} for argument ${i+1}")
+          j := join_types(t, ungenericed_req_t) or {
+            c.checker_error("cannot implicitly cast between type ${t} and ${req_t} for argument ${i+1}")
           }
+
           if !are_types_equal(j, t) {
             c.result.implicit_casts[expr.argv[i].id] = j
           }
         }
-        callee_typ.ret
+
+        mut new_name := sym.name
+        for _, ct in to_collapse {
+          new_name += "_${ct.unqual().compact_str()}" 
+        }
+
+        // TODO: check if call respects new type
+        
+        c.result.resolved_calls[expr.id] = new_name
+
+        mut new_sym := Symbol(SymbolFunc {
+          qualifs: sym.qualifs
+          name: new_name
+          ext_name: sym.ext_name
+          type: sym.type
+          arg_syms: sym.arg_syms
+        })
+
+        for cn, ct in to_collapse {
+          new_sym = c.collapse_sym_generic(new_sym, cn, ct)
+        }
+
+        og_decl := c.result.func_name_to_decl[sym.name] or {
+          c.checker_error("function ${sym.name} doesn't exist in func_name_to_decl map (bad!)")
+        }
+
+        c.result.monomorph_decls << StmtDeclFunc {
+          sym: new_sym
+          span: c.span 
+          id: c.next_id() 
+          block: og_decl.block
+        }
+
+        new_sym.type.ret
+
       } else {
         c.checker_error("tried to call an expression of type ${callee_typ}")
       }
@@ -422,7 +476,8 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
       if !stmt.sym.name.is_lower() {
         c.checker_error("function names must be snake case (${stmt.sym.name} -> ${stmt.sym.name.camel_to_snake()})")
       }
-
+      
+      c.result.func_name_to_decl[stmt.sym.name] = stmt
       c.register_sym(c.resolve_sym_types(stmt.sym))
 
       c.push_scope(&stmt)
@@ -612,17 +667,18 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
   }
 }
 
-fn Checker.check_program(ast []Stmt) CheckedAST {
+fn Checker.check_program(parsed ParserResult) CheckedAST {
   mut c := Checker{
     table: SymbolTable{}, 
     result: CheckedAST{
-      ast: ast
+      ast: parsed.ast 
     }
+    last_id: parsed.last_id
   }
 
 
   c.current_scope = c.table.root_scope
-  for stmt in ast {
+  for stmt in parsed.ast {
     c.check_stmt(stmt)
   }
 

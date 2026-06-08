@@ -198,6 +198,44 @@ fn (t Type) str() string {
   return type_str
 }
 
+fn (t Type) compact_str() string {
+  mut type_str := t.qualifs.str()
+  type_str += match t {
+    TypePrimitive {
+       t.type.str()
+    }
+    TypeStruct {
+      "s_${t.name}"
+    }
+    TypeEnum{ 
+      "e_${t.name}"
+    } 
+    TypeFunc {
+      mut s := "fn_"
+      assert(t.arg_names.len == 0 || t.arg_types.len == t.arg_names.len)
+			for i := 0; i < t.arg_types.len; i++ {
+        arg_t := t.arg_types[i]
+				s += arg_t.compact_str()+"_"
+			}
+      s += "_${t.ret}"
+			s
+    }
+    TypePointer {
+      "p_${t.inner.compact_str()}"
+    }
+    TypeArray {
+      "a_${t.inner.compact_str()}"
+    }
+    TypeUnresolved {
+      "u_${t.name}"
+    }
+    TypeGeneric {
+      "g_${t.name}"
+    }
+  }
+  return type_str
+}
+
 fn (t Type) unqual() Type {
   return match t {
     TypePrimitive {TypePrimitive{qualifs: [], type: t.type}}
@@ -328,6 +366,10 @@ fn join_types(a Type, b Type) ?Type {
     if are_types_equal(ua.inner, TypePrimitive{type: .void}) {return ub}
     if are_types_equal(ub.inner, TypePrimitive{type: .void}) {return ua}
   }
+
+  if ua is TypeGeneric && ub !is TypeGeneric {return ub}
+  if ub is TypeGeneric && ua !is TypeGeneric {return ua}
+  // shouldn't be possible ^^ must be collapsed before checking
 
   return none
 }

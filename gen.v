@@ -13,6 +13,8 @@ struct Generator {
   gend_struct_decl strings.Builder
   gend_main strings.Builder
 
+  span Span
+
   libs_to_link []string
 }
 
@@ -23,7 +25,7 @@ struct GeneratorResult {
 
 @[noreturn]
 fn (g Generator) gen_error(s string) {
-  eprintln("Generation Error -> \"${s}\"")
+  eprintln("${g.span} Generation Error -> \"${s}\"")
 	exit(1)
 }
 
@@ -136,7 +138,12 @@ fn (mut g Generator) gen_expr(e Expr) string {
         s + "}"
       }
       ExprCall {
-        mut s := "${g.gen_expr(e.callee)}("
+        callee_name := if e.id in g.checked_ast.resolved_calls {
+          g.mangle_ident(g.checked_ast.resolved_calls[e.id])
+        } else {
+          g.gen_expr(e.callee)
+        }
+        mut s := "${callee_name}("
         for argv in e.argv {
           s += g.gen_expr(argv)
           if argv != e.argv[e.argv.len-1] {
@@ -157,6 +164,7 @@ fn (mut g Generator) gen_expr(e Expr) string {
 }
 
 fn (mut g Generator) gen_stmt(s Stmt) {
+  g.span = s.span
   match s {
     StmtNoop {}
     StmtExpr {{g.writeln_tabbed("${g.gen_expr(s.expr)};")}}
@@ -178,7 +186,11 @@ fn (mut g Generator) gen_stmt(s Stmt) {
       if s.id in g.checked_ast.generic_decls {
         return 
       }
-      sym := g.current_scope.lookup_sym(s.sym.name) or {g.gen_error("didn't find func symbol (bad!)")}
+      sym := if s in g.checked_ast.monomorph_decls {
+        s.sym 
+      } else {
+        g.current_scope.lookup_sym(s.sym.name) or {g.gen_error("didn't find func symbol (bad!)")}
+      }
       args := (sym as SymbolFunc).arg_syms
       if sym.type.variadic_type != none {
         g.gend_fn_decl.write_string("#define ${g.mangle_ident(sym.name)}(")
@@ -303,6 +315,11 @@ fn (mut g Generator) gen_stmt(s Stmt) {
 
 fn Generator.gen_program(checked_ast CheckedAST) GeneratorResult {
   mut g := Generator{checked_ast: checked_ast, current_scope: checked_ast.table.root_scope}
+
+  for decl in g.checked_ast.monomorph_decls {
+    g.gen_stmt(decl)
+  }
+
   for stmt in g.checked_ast.ast {
     g.gen_stmt(stmt)
   }
