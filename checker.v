@@ -4,6 +4,7 @@ module main
 struct Checker {
   mut: 
   table SymbolTable
+  generics map[string]TypeGeneric
   current_scope &Scope = &Scope{}
   ret_type_stack []Type = []Type{}
   span Span
@@ -18,6 +19,8 @@ struct CheckedAST {
   scopes map[i32]&Scope // map[id]&Scope
   resolved map[i32]Type //map[id]Type
   implicit_casts map[i32]Type //map[id]Type
+  generic_decls map[i32]Stmt //map[id]Decl
+  monomorph_decls []Stmt //[]Decl
 }
 
 @[noreturn]
@@ -84,6 +87,9 @@ fn (mut c Checker) resolve_type(t Type) Type {
     if t.name in c.table.structs {
       return TypeStruct{qualifs: t.qualifs, name: t.name} 
     }
+    if t.name in c.generics {
+      return c.generics[t.name]
+    }
     c.checker_error("type ${Type(t)} could not be resolved")
   }
   if t is TypeArray {
@@ -147,6 +153,43 @@ fn (mut c Checker) resolve_sym_types(s Symbol) Symbol {
   }
 }
 
+fn (mut c Checker) collapse_sym_generics(s Symbol, gen_name string, type Type) Symbol {
+  return match s {
+    SymbolVar {
+      SymbolVar {
+        qualifs: s.qualifs
+        name: s.name
+        type: s.type.collapse_generic(gen_name, type.unqual())
+      }
+    }
+    SymbolFunc {
+      SymbolFunc {
+        qualifs: s.qualifs 
+        name: s.name
+        ext_name: s.ext_name
+        type: s.type.collapse_generic(gen_name, type.unqual())
+        arg_syms: s.arg_syms.map(c.collapse_sym_generics(it, gen_name, type.unqual()))
+      }
+    }
+    SymbolStruct {
+      SymbolStruct {
+        qualifs: s.qualifs 
+        name: s.name
+        type: s.type.collapse_generic(gen_name, type.unqual())
+        member_syms: s.member_syms.map(c.collapse_sym_generics(it, gen_name, type.unqual()))
+      }
+    }
+    SymbolEnum {
+      SymbolEnum {
+        qualifs: s.qualifs 
+        name: s.name
+        type: s.type.collapse_generic(gen_name, type.unqual())
+        member_syms: s.member_syms.map(c.collapse_sym_generics(it, gen_name, type.unqual()))
+      }
+    }
+  }
+}
+
 // checking expressions
 
 fn (mut c Checker) check_expr(expr Expr) Type {
@@ -202,6 +245,14 @@ fn (mut c Checker) check_expr(expr Expr) Type {
           } else {
             sym.type.variadic_type or {c.checker_error("unreachable (I hope)")}
           }
+
+          if req_t is TypeGeneric {
+            c.result.monomorph_decls << StmtDeclFunc {
+              sym: c.collapse_sym_generics(sym, req_t.name, t)
+            }
+            dump(c.result.monomorph_decls)
+          }
+
           j := join_types(t, req_t) or {
             c.checker_error("cannot implicitly cast value of type ${t} to ${req_t} for argument ${i+1}")
           }
@@ -545,6 +596,17 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
 
     StmtInclude {}
     StmtDirectiveLink {}
+
+    StmtGeneric {
+      if stmt.decl !is StmtDeclFunc && 
+          stmt.decl !is StmtDeclStruct {
+          c.checker_error("only functions and structs can be declared with generics")
+      }
+      c.generics[stmt.name] = TypeGeneric{name: stmt.name}
+      c.check_stmt(stmt.decl)
+      c.result.generic_decls[stmt.decl.id] = stmt.decl
+      c.generics.clear() // only valid for one declaration
+    }
 
     else {c.checker_error("unimplemented check_stmt() for ${stmt}")}
   }

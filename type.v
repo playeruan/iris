@@ -96,7 +96,7 @@ fn BuiltinType.smallest_int(from i64, unsigned bool) BuiltinType {
 type Type = 
   TypePrimitive | TypeFunc | TypePointer | 
   TypeArray | TypeStruct | TypeEnum |
-  TypeUnresolved
+  TypeUnresolved | TypeGeneric
 
 struct TypePrimitive {
   qualifs []TypeQualifier
@@ -130,6 +130,12 @@ struct TypeEnum {
   qualifs []TypeQualifier
   name string
   as Type
+}
+
+struct TypeGeneric {
+  qualifs []TypeQualifier
+  name string
+  // TODO: constaints []GenericConstraint
 }
 
 // for things that clearly should be 
@@ -185,6 +191,9 @@ fn (t Type) str() string {
     TypeUnresolved {
       "unresolved ${t.name}"
     }
+    TypeGeneric {
+      "generic ${t.name}"
+    }
   }
   return type_str
 }
@@ -198,6 +207,41 @@ fn (t Type) unqual() Type {
     TypeStruct {TypeStruct{qualifs: [], name: t.name}}
     TypeEnum {TypeEnum{qualifs: [], name: t.name, as: t.as}}
     TypeUnresolved{TypeUnresolved{qualifs: [], name: t.name}}
+    TypeGeneric {TypeGeneric{qualifs: [], name: t.name}}
+  }
+}
+
+fn (t Type) collapse_generic(gen_name string, type Type) Type {
+  return match t {
+    TypeUnresolved, TypePrimitive, TypeEnum, TypePointer, TypeArray {
+      panic("not possible to collapse generic on ${t}")
+    }
+    TypeGeneric {
+      if t.name == gen_name {type} else {t}
+    }
+    TypeFunc {
+      new_ret := if t.ret is TypeGeneric && t.ret.name == gen_name {
+        type
+      } else {
+        t.ret
+      }
+      mut new_argts := []Type{}
+      for arg in t.arg_types {
+        new_argts << if arg is TypeGeneric && arg.name == gen_name {
+          type
+        } else {
+          arg
+        }
+      }
+      TypeFunc {
+        qualifs: t.qualifs
+        ret: new_ret
+        arg_types: new_argts
+        arg_names: t.arg_names
+        variadic_type: none // TODO: not sure
+      }
+    }
+    TypeStruct {panic("todo collapse generic on type struct")}
   }
 }
 
@@ -233,6 +277,9 @@ fn are_types_equal(a Type, b Type) bool {
     }
     TypeUnresolved {
       false // unresolved type cannot be equal
+    }
+    TypeGeneric {
+      ub is TypeGeneric && ua.name == ub.name
     }
   }
 }

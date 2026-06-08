@@ -1,0 +1,21 @@
+include "std/linkedlist.iris"
+
+main: () -> i32 {
+    ll: ^LinkedListNode = nullptr;
+    ll_append(&ll, 69);
+    ll_append(&ll, 420);
+    ll_append(&ll, 1337);
+    ll_append(&ll, 69420);
+
+    node: ^LinkedListNode = ll;
+    while node != nullptr {
+        printf("%d\n", node..val);
+        node = node..next;
+    }
+
+    ll_delete(&ll);
+
+    printf("%p\n", ll);
+  
+    ret 0;
+}

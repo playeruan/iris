@@ -158,6 +158,7 @@ fn (mut g Generator) gen_expr(e Expr) string {
 
 fn (mut g Generator) gen_stmt(s Stmt) {
   match s {
+    StmtNoop {}
     StmtExpr {{g.writeln_tabbed("${g.gen_expr(s.expr)};")}}
     StmtBlock {
       g.tabs++
@@ -174,6 +175,9 @@ fn (mut g Generator) gen_stmt(s Stmt) {
       g.writeln_tabbed("${g.gen_type_left(sym.type)} ${g.mangle_ident(s.sym.name)}${g.gen_type_right(sym.type)} = ${g.gen_expr(s.value)};")
     }
     StmtDeclFunc {
+      if s.id in g.checked_ast.generic_decls {
+        return 
+      }
       sym := g.current_scope.lookup_sym(s.sym.name) or {g.gen_error("didn't find func symbol (bad!)")}
       args := (sym as SymbolFunc).arg_syms
       if sym.type.variadic_type != none {
@@ -229,6 +233,9 @@ fn (mut g Generator) gen_stmt(s Stmt) {
     StmtContinue  {g.writeln_tabbed("continue;")}
     StmtBreak     {g.writeln_tabbed("break;")}
     StmtDeclStruct {
+      if s.id in g.checked_ast.generic_decls {
+        return 
+      }
       resolved_sym := g.checked_ast.table.structs[s.sym.name] or {g.gen_error("couldn't find struct ${s.sym.name} in symtable")}
       if s.sym.qualifs.contains(.extern) {
         g.gend_struct_decl.writeln("#define ${g.mangle_ident(s.sym.name)} ${s.sym.name}")
@@ -285,6 +292,10 @@ fn (mut g Generator) gen_stmt(s Stmt) {
       if s.lib !in g.libs_to_link {
         g.libs_to_link << s.lib
       }
+    }
+    StmtDeclConstraint {}
+    StmtGeneric {
+      g.gen_stmt(s.decl)
     }
     //else {g.gen_error("unimplemented stmt ${s}")}
   }

@@ -24,7 +24,8 @@ type Stmt =
   StmtReturn | StmtContinue | StmtBreak |
   StmtBranch | StmtWhile | StmtFor | StmtAssign |
   StmtDeclEnum | StmtDeclEnumMember | StmtInclude |
-  StmtDirectiveLink
+  StmtDirectiveLink | StmtDeclConstraint |
+  StmtGeneric | StmtNoop
 
 struct StmtExpr {
   expr Expr
@@ -140,6 +141,23 @@ struct StmtInclude {
 
 struct StmtDirectiveLink {
   lib string
+  span Span
+  id i32
+}
+
+struct StmtDeclConstraint {
+  span Span
+  id i32
+}
+
+struct StmtGeneric {
+  name string
+  decl Stmt
+  span Span
+  id i32
+}
+
+struct StmtNoop {
   span Span
   id i32
 }

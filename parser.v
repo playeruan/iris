@@ -12,6 +12,7 @@ struct Parser {
   span Span
   last_id i32
   parsed_files []string
+  generic_defs map[i32]Stmt //map[id]Decl
 }
 
 struct ParserResult {
@@ -19,6 +20,7 @@ struct ParserResult {
   ast []Stmt
   last_id i32
   parsed_files []string
+  generic_defs map[i32]Stmt //map[id]Decl
 }
 
 fn (mut p Parser) next_id() i32 {
@@ -663,6 +665,21 @@ fn (mut p Parser) parse_stmt() Stmt {
         id: p.next_id()
       }
     }
+    .generic {
+      p.advance()
+      name := p.expect(.identifier).text
+      decl := p.parse_stmt()
+      p.generic_defs[decl.id] = decl
+      StmtGeneric {
+        name: name
+        decl: decl
+        span: p.span
+        id: p.next_id()
+      }
+    }
+    .constraint {
+      StmtDeclConstraint{span: p.span, id: p.next_id()}
+    }
     .while  {p.parse_while()}
     .for    {p.parse_error("for not yet supported because I'm lazy")}
     .if     {p.parse_branch()}
@@ -774,5 +791,5 @@ fn Parser.parse_program(toks []Token, start_id int, parsed_files []string) Parse
   for p.peek().kind != .eof {
     p.ast << p.parse_stmt()
   }
-  return ParserResult{p.ast, p.last_id, p.parsed_files}
+  return ParserResult{p.ast, p.last_id, p.parsed_files, p.generic_defs}
 }
