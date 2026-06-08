@@ -104,7 +104,6 @@ fn (mut c Checker) resolve_type(t Type) Type {
       arg_types: t.arg_types.map(c.resolve_type(it))
       arg_names: t.arg_names
       variadic_type: t.variadic_type
-      captured_names: t.captured_names 
       ret: c.resolve_type(t.ret)
     }
   }
@@ -389,12 +388,6 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
         n := stmt.sym.type.arg_names[i]
         t := c.resolve_type(stmt.sym.type.arg_types[i])
         c.register_sym(SymbolVar{name: n, type: t})
-      }
-
-      for n in stmt.sym.type.captured_names {
-        if c.current_scope.lookup_sym(n) == none {
-          c.checker_error("cannot capture undeclared symbol ${n}")
-        }
       }
 
       c.check_stmt_block(stmt.block)

@@ -752,21 +752,6 @@ fn (mut p Parser) parse_func_type(qualifs []TypeQualifier) TypeFunc {
 
   p.expect(.rparen)
 
-  mut captured_names := []string{}
-
-  if p.peek().kind == .lsquare {
-    p.expect(.lsquare)
-    for p.peek().kind != .rsquare {
-      captured_names << p.advance().text
-
-      if p.peek().kind != .rsquare {
-        p.expect(.comma)
-      }
-    }
-
-    p.expect(.rsquare)
-  }
-
   mut ret := Type(TypePrimitive{type: .void})
 
   if p.peek().kind == .arrow {
@@ -779,7 +764,6 @@ fn (mut p Parser) parse_func_type(qualifs []TypeQualifier) TypeFunc {
     arg_types: arg_types
     arg_names: arg_names
     variadic_type: variadic_t
-    captured_names: captured_names
     ret: ret
   }
 }

@@ -108,7 +108,6 @@ struct TypeFunc {
   arg_types []Type
   arg_names []string
   variadic_type ?Type  // none if function is not variadic
-  captured_names []string
   ret Type
 }
 
@@ -172,18 +171,8 @@ fn (t Type) str() string {
       if t.arg_types.len == 0 {
         s += "void"
       }
-			s += ")"
 
-      s += "["
-
-      for capt_n in t.captured_names {
-				s += capt_n
-				if capt_n != t.captured_names[t.captured_names.len-1] {
-					s += ", "
-				}
-			}
-
-      s += "] -> ${t.ret}"
+      s += ") -> ${t.ret}"
 
 			s
     }
