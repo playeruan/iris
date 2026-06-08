@@ -165,7 +165,7 @@ fn (t Type) str() string {
         arg_t := t.arg_types[i]
         arg_n := t.arg_names[i] or {""}
 				s += arg_n + ": "  + arg_t.str()
-				if arg_t != t.arg_types[t.arg_types.len-1] {
+				if i != t.arg_types.len-1 {
 					s += ", "
 				}
 			}
@@ -249,6 +249,29 @@ fn (t Type) unqual() Type {
   }
 }
 
+fn (t TypePointer) pointer_depth() i32 {
+  mut t_ := Type(t)
+  mut i := 1;
+  for t_ is TypePointer {
+    t_ = t_.inner
+    i++;
+  }
+  return i;
+}
+
+fn (t TypePointer) traverse_pointer(layers i32) Type {
+  mut t_ := Type(t)
+  mut i := 1;
+  for t_ is TypePointer && i < layers {
+    t_ = (t_ as TypePointer).inner
+    i++;
+  }
+  if i < layers {
+    panic("traversed pointer by too many layers!")
+  }
+  return t_;
+}
+
 fn (t Type) is_generic() bool {
   return match t {
     TypeGeneric {true}
@@ -258,17 +281,32 @@ fn (t Type) is_generic() bool {
   }
 }
 
+fn (t Type) get_generic_name() string {
+  return match t {
+    TypeGeneric {t.name}
+    TypePointer {t.inner.get_generic_name()}
+    TypeArray {t.inner.get_generic_name()}
+    else {panic("invalid tried to get generic name of type ${t}")}
+  }
+}
+
 fn (t Type) collapse_generic(gen_name string, type Type) Type {
   return match t {
-    TypeUnresolved, TypePrimitive, TypeEnum, TypePointer, TypeArray {
+    TypeUnresolved, TypePrimitive, TypeEnum {
       panic("not possible to collapse generic on ${t}")
+    }
+    TypePointer {
+      TypePointer {inner: t.inner.collapse_generic(gen_name, type)}
+    }
+    TypeArray {
+      TypeArray {inner: t.inner.collapse_generic(gen_name, type)}
     }
     TypeGeneric {
       if t.name == gen_name {type} else {t}
     }
     TypeFunc {
-      new_ret := if t.ret is TypeGeneric && t.ret.name == gen_name {
-        type
+      new_ret := if t.ret.is_generic() && t.ret.get_generic_name() == gen_name {
+        t.ret.collapse_generic(gen_name, type)
       } else {
         t.ret
       }

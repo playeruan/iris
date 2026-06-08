@@ -41,7 +41,7 @@ fn (mut g Generator) mangle_ident(s string) string {
   return "iris_${s}_"
 }
 
-fn (mut g Generator) gen_type_left(t Type) string {
+fn (mut g Generator) gen_type_left(t Type, is_ret bool) string {
   return match t {
     TypePrimitive {
       match t.type {
@@ -59,18 +59,23 @@ fn (mut g Generator) gen_type_left(t Type) string {
         else {g.gen_error("unimplemented type ${t.type}")}
       }
     }
-    TypePointer {"${g.gen_type_left(t.inner)}*"}
-    TypeArray   {"${g.gen_type_left(t.inner)}"}
+    TypePointer {"${g.gen_type_left(t.inner, is_ret)}*"}
+    TypeArray   {
+      if is_ret {"${g.gen_type_left(t.inner, is_ret)}*"}
+      else {"${g.gen_type_left(t.inner, is_ret)}"}
+    }
     TypeStruct  {"struct ${g.mangle_ident(t.name)}"}
     TypeEnum    {"enum ${g.mangle_ident(t.name)}"}
     else        {g.gen_error("something went wrong here, type: ${t}")}
   }
 }
 
-fn (mut g Generator) gen_type_right(t Type) string {
+fn (mut g Generator) gen_type_right(t Type, is_ret bool) string {
   return match t {
     TypePrimitive, TypePointer, TypeStruct, TypeEnum {""}
-    TypeArray   {"[]"}
+    TypeArray   {
+      if is_ret {""} else {"[]"}
+    }
     else        {g.gen_error("something went wrong here, type: ${t}")}
   }
 }
@@ -80,7 +85,7 @@ fn (mut g Generator) gen_expr(e Expr) string {
     mut pre := ""
     mut post := ""
     if e.id in g.checked_ast.implicit_casts {
-      t := g.gen_type_left(g.checked_ast.implicit_casts[e.id])
+      t := g.gen_type_left(g.checked_ast.implicit_casts[e.id], false)
       pre = "((${t})"
       post = ")"
     }
@@ -101,7 +106,7 @@ fn (mut g Generator) gen_expr(e Expr) string {
         t := if e.id in g.checked_ast.resolved {g.checked_ast.resolved[e.id]} else {e.type}
         match t {
           TypePrimitive {t.type.size().str()}
-          TypeStruct {"sizeof(${g.gen_type_left(t)})"}
+          TypeStruct {"sizeof(${g.gen_type_left(t, false)})"}
           else {g.gen_error("not possible to get sizeof ${t}")}
         }
       }
@@ -118,7 +123,7 @@ fn (mut g Generator) gen_expr(e Expr) string {
         s
       }
       ExprLiteralStruct {
-        mut s := "(${g.gen_type_left(e.type)}){"
+        mut s := "(${g.gen_type_left(e.type, false)}){"
         for argv in e.argv {
           s += g.gen_expr(argv)
           if argv != e.argv[e.argv.len-1] {
@@ -153,8 +158,8 @@ fn (mut g Generator) gen_expr(e Expr) string {
         s + ")"
       }
       ExprVar {g.mangle_ident(e.name)}
-      ExprType {g.gen_type_left(e.type)+g.gen_type_right(e.type)}
-      ExprCast {"((${g.gen_type_left(g.checked_ast.resolved[e.id])})${g.gen_expr(e.castee)})"}
+      ExprType {g.gen_type_left(e.type, false)+g.gen_type_right(e.type, false)}
+      ExprCast {"((${g.gen_type_left(g.checked_ast.resolved[e.id], false)})${g.gen_expr(e.castee)})"}
       ExprBinary {"(${g.gen_expr(e.left)}${e.op}${g.gen_expr(e.right)})"}
       ExprUnary  {"(${e.op}${g.gen_expr(e.operand)})"}
       ExprIndex  {"${g.gen_expr(e.indexee)}[${g.gen_expr(e.idx)}]"}
@@ -180,7 +185,7 @@ fn (mut g Generator) gen_stmt(s Stmt) {
     }
     StmtDeclVar {
       sym := g.current_scope.lookup_sym(s.sym.name) or {g.gen_error("forgot to register a symbol")}
-      g.writeln_tabbed("${g.gen_type_left(sym.type)} ${g.mangle_ident(s.sym.name)}${g.gen_type_right(sym.type)} = ${g.gen_expr(s.value)};")
+      g.writeln_tabbed("${g.gen_type_left(sym.type, false)} ${g.mangle_ident(s.sym.name)}${g.gen_type_right(sym.type, false)} = ${g.gen_expr(s.value)};")
     }
     StmtDeclFunc {
       if s.id in g.checked_ast.generic_decls {
@@ -191,6 +196,7 @@ fn (mut g Generator) gen_stmt(s Stmt) {
       } else {
         g.current_scope.lookup_sym(s.sym.name) or {g.gen_error("didn't find func symbol (bad!)")}
       }
+
       args := (sym as SymbolFunc).arg_syms
       if sym.type.variadic_type != none {
         g.gend_fn_decl.write_string("#define ${g.mangle_ident(sym.name)}(")
@@ -210,9 +216,9 @@ fn (mut g Generator) gen_stmt(s Stmt) {
         g.gend_fn_decl.writeln(", ##__VA_ARGS__)")
         return
       }
-      mut declar := "${g.gen_type_left(sym.type.ret)} ${g.mangle_ident(sym.name)}("
+      mut declar := "${g.gen_type_left(sym.type.ret, true)} ${g.mangle_ident(sym.name)}("
       for arg in args {
-        declar += "${g.gen_type_left(arg.type)} ${g.mangle_ident(arg.name)}${g.gen_type_right(arg.type)}" 
+        declar += "${g.gen_type_left(arg.type, false)} ${g.mangle_ident(arg.name)}${g.gen_type_right(arg.type, false)}" 
         if arg != args[args.len-1] {
           declar += ", "
         }
@@ -226,7 +232,7 @@ fn (mut g Generator) gen_stmt(s Stmt) {
         if sym.type.ret != Type(TypePrimitive{type: .void}) {
           g.write_tabbed("return ")
         }
-        g.write_tabbed("${name}(") 
+        g.gend_main.write_string("${name}(") 
         mut wrap_argv := ""
         for arg in args {
           wrap_argv += "${g.mangle_ident(arg.name)}"
@@ -234,7 +240,7 @@ fn (mut g Generator) gen_stmt(s Stmt) {
             wrap_argv += ", "
           }
         }
-        g.writeln_tabbed("${wrap_argv});")
+        g.gend_main.writeln("${wrap_argv});")
         g.tabs--
       } else {
         g.gen_stmt(s.block)  
@@ -255,7 +261,7 @@ fn (mut g Generator) gen_stmt(s Stmt) {
       }
       g.gend_struct_decl.writeln("struct ${g.mangle_ident(s.sym.name)} {")
       for m in resolved_sym.member_syms {
-        g.gend_struct_decl.writeln("\t${g.gen_type_left(m.type)} ${m.name};")
+        g.gend_struct_decl.writeln("\t${g.gen_type_left(m.type, false)} ${m.name};")
       }
       g.gend_struct_decl.writeln("};\n")
     }

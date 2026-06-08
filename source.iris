@@ -4,11 +4,16 @@ generic T
 foo: (x: T, y: T) -> T {ret x;}
 
 generic T 
+bar: (xp: []T) -> []T {ret xp;}
+
+generic T 
 struct Arr {
-  data: ^T;
+  data: T;
 }
 
 main: () -> i32 {
   printf("%d\n", foo(2, 3)+2);
+  x: []i32 = [2, 3, 1];
+  bar(x);
   ret 0;
 }

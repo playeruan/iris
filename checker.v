@@ -163,13 +163,13 @@ fn (mut c Checker) resolve_sym_types(s Symbol) Symbol {
 }
 
 fn (mut c Checker) collapse_sym_generic (s Symbol, gen_name string, type Type) Symbol {
-  return match s {
+  collapsed := match s {
     SymbolVar {
-      SymbolVar {
+      Symbol(SymbolVar {
         qualifs: s.qualifs
         name: s.name
         type: s.type.collapse_generic(gen_name, type.unqual())
-      }
+      })
     }
     SymbolFunc {
       SymbolFunc {
@@ -197,6 +197,7 @@ fn (mut c Checker) collapse_sym_generic (s Symbol, gen_name string, type Type) S
       }
     }
   }
+  return collapsed
 }
 
 // checking expressions
@@ -259,16 +260,25 @@ fn (mut c Checker) check_expr(expr Expr) Type {
           }
 
           mut ungenericed_req_t := req_t
-          if req_t is TypeGeneric {
-            if req_t.name in to_collapse {
-              collapsed := to_collapse[req_t.name] or {panic("wtf")}
+          if req_t.is_generic() {
+            gname := req_t.get_generic_name()
+            if gname in to_collapse {
+              collapsed := to_collapse[gname] or {panic("wtf")}
               if !are_types_equal(collapsed, t) {
-                c.checker_error("all arguments of generic type ${req_t.name} must have the same type. expected ${t}, got ${t}") 
+                c.checker_error("all arguments of generic type ${gname} must have the same type. expected ${t}, got ${t}") 
               }
             } else {
-              to_collapse[req_t.name] = t
+              if req_t is TypePointer {
+                if t is TypePointer && req_t.pointer_depth() <= t.pointer_depth() {
+                  to_collapse[gname] = t.traverse_pointer(req_t.pointer_depth())
+                } else {
+                  c.checker_error("impossible to match type ${t} with generic ${Type(req_t)}")
+                } 
+              } else {
+                to_collapse[gname] = t
+              }
             }
-            ungenericed_req_t  = t
+            ungenericed_req_t = t
           }
 
           j := join_types(t, ungenericed_req_t) or {
@@ -300,7 +310,7 @@ fn (mut c Checker) check_expr(expr Expr) Type {
         for cn, ct in to_collapse {
           new_sym = c.collapse_sym_generic(new_sym, cn, ct)
         }
-
+        
         og_decl := c.result.func_name_to_decl[sym.name] or {
           c.checker_error("function ${sym.name} doesn't exist in func_name_to_decl map (bad!)")
         }
