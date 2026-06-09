@@ -677,22 +677,52 @@ fn (mut p Parser) parse_stmt() Stmt {
     .generic {
       p.advance()
       mut names := []string{}
+      mut constraints := []string{}
       names << p.expect(.identifier).text
+      if p.peek().kind == .colon {
+        p.advance()
+        constraints << p.expect(.identifier).text
+      } else {
+        constraints << "any"
+      }
       for p.peek().kind == .comma {
         p.expect(.comma)
         names << p.expect(.identifier).text
+        if p.peek().kind == .colon {
+          p.advance()
+          constraints << p.expect(.identifier).text
+        } else {
+          constraints << "any"
+        }
       }
       decl := p.parse_stmt()
       p.generic_defs[decl.id] = decl
       StmtGeneric {
         type_params: names
+        constraints: constraints
         decl: decl
         span: p.span
         id: p.next_id()
       }
     }
     .constraint {
-      StmtDeclConstraint{span: p.span, id: p.next_id()}
+      p.advance()
+      name := p.expect(.identifier)
+      p.expect(.o_eq)
+      p.expect(.lsquare)
+      mut types := []Type{}
+      for p.peek().kind != .rsquare {
+        types << p.parse_type() 
+        if p.peek().kind == .comma {p.expect(.comma)}
+      }
+      p.expect(.rsquare)
+      p.expect(.semicolon)
+      StmtDeclConstraint{
+        name: name.text
+        types: types
+        span: p.span
+        id: p.next_id()
+      }
     }
     .while  {p.parse_while()}
     .for    {p.parse_error("for not yet supported because I'm lazy")}
@@ -751,11 +781,12 @@ fn (mut p Parser) parse_type() Type {
   } else {
     tok_name := p.advance()
     mut generic_args := []Type{}
+ 
     if p.peek().kind == .o_lt {
       p.advance()
       for p.peek().kind != .o_gt {
         generic_args << p.parse_type()
-        if p.peek().kind == .comma {p.advance()}
+       if p.peek().kind == .comma {p.advance()}
       }
       p.expect(.o_gt)
     }

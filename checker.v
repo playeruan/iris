@@ -30,6 +30,7 @@ struct CheckedAST {
 
 struct GenericDecl {
   type_params []string
+  constraints []string
   decl Stmt
 }
 
@@ -150,14 +151,32 @@ fn (mut c Checker) register_sym(s Symbol) {
   c.current_scope.syms[s.name] = c.resolve_sym_types(s)
 }
 
-fn (mut c Checker) register_generic(name string, type_params []string, decl Stmt) {
+fn (mut c Checker) register_generic(name string, type_params []string, constraints []string, decl Stmt) {
   if name in c.generic_decls {
     c.checker_error("redefinition of generic ${name}")
   }
   c.generic_decls[name] = GenericDecl {
     type_params: type_params
+    constraints: constraints
     decl: decl
   }
+}
+
+fn (mut c Checker) enforce_constraints(name string, substitution map[string]Type) bool {
+  gdecl := c.generic_decls[name] or {c.checker_error("undefined generic decl ${name}")} 
+  for g_name, replacement in substitution {
+    idx := gdecl.type_params.index(g_name)
+    if idx == -1 {
+      c.checker_error("unreachable @LINE")
+    }
+    constr_name := gdecl.constraints[idx] or {c.checker_error("unreachable @LINE")}
+    if constr_name == "any" {continue}
+    constr := c.table.constraints[constr_name]
+    if !constr.contains(replacement) {
+      c.checker_error("cannot replace generic ${g_name} with type ${Type(replacement)} not in constraint ${constr_name}")
+    }
+  }
+  return false
 }
 
 fn (mut c Checker) begin_instantiation(gdecl GenericDecl, subst map[string]Type) (map[string]Type, []string) {
@@ -371,6 +390,7 @@ fn (mut c Checker) check_expr(expr Expr) Type {
         }
         mut subst := map[string]Type{}
         for i, p in gdecl.type_params { subst[p] = resolved_args[i] }
+        c.enforce_constraints(expr.type.name, subst)
         mangled := mangle_monomorph_name(expr.type.name, subst)
         if mangled !in c.table.structs {
           c.instantiate_struct(expr.type.name, subst) or {
@@ -420,6 +440,7 @@ fn (mut c Checker) check_expr(expr Expr) Type {
           subst := infer_type_args(gdecl.type_params, callee_typ.arg_types, arg_types) or {
             c.checker_error("could not infer generic type args for ${expr.callee.name}: ${err}")
           }
+          c.enforce_constraints(expr.callee.name, subst)
           mono := c.instantiate_func(expr.callee.name, subst) or {
             c.checker_error("could not instantiate generic function ${expr.callee.name}: ${err}")
           }
@@ -703,6 +724,11 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
     }
 
     StmtDeclEnum {
+
+      if stmt.members.len == 0 {
+        c.checker_error("empty enums aren't allowed")
+      }
+
       for m in stmt.members {
         c.check_stmt(m)
       }
@@ -796,10 +822,23 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
         StmtDeclStruct  {stmt.decl.sym}
         else            {c.checker_error("unreachable ${@LINE}")}
       } 
-      c.register_generic(sym.name, stmt.type_params, stmt.decl)
+      c.register_generic(sym.name, stmt.type_params, stmt.constraints, stmt.decl)
       c.generic_params = stmt.type_params
       c.register_sym(c.resolve_sym_types(sym))
       c.generic_params = []
+    }
+
+    StmtDeclConstraint {
+        
+      if !stmt.name.starts_with_capital() {
+        c.checker_error("struct names must be camel case (${stmt.name} -> ${stmt.name.snake_to_camel()})")
+      }
+
+      if stmt.name in c.table.constraints {
+        c.checker_error("redefinition of constraint ${stmt.name}")
+      }
+      res_types := stmt.types.map(c.resolve_type(it))
+      c.table.constraints[stmt.name] = res_types
     }
 
     StmtInclude {}

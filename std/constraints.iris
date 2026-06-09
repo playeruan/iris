@@ -1,0 +1,4 @@
+
+constraint Numeric = [i8, i16, i32, u8, u16, u32, f32, f64];
+constraint Integer = [i8, i16, i32, u8, u16, u32];
+constraint Float = [f32, f64];

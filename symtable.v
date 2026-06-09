@@ -48,6 +48,7 @@ struct SymbolTable {
   root_scope &Scope = &Scope{}
   structs map[string]SymbolStruct
   enums   map[string]SymbolEnum
+  constraints map[string][]Type // map[constraint name]constraint types
 }
 
 fn (s Scope) lookup_sym(name string) ?Symbol {

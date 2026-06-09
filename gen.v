@@ -279,7 +279,7 @@ fn (mut g Generator) gen_stmt(s Stmt) {
       for m in s.members {
         g.gen_stmt(m)
       }
-      g.gend_struct_decl.writeln("}")
+      g.gend_struct_decl.writeln("};")
     }
     StmtDeclEnumMember {
       g.gend_struct_decl.writeln("\t${g.mangle_ident(s.name)},")

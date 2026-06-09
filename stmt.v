@@ -145,14 +145,17 @@ struct StmtDirectiveLink {
   id i32
 }
 
-struct StmtDeclConstraint {
+struct StmtGeneric {
+  type_params []string
+  constraints []string
+  decl Stmt
   span Span
   id i32
 }
 
-struct StmtGeneric {
-  type_params []string
-  decl Stmt
+struct StmtDeclConstraint {
+  name string
+  types []Type
   span Span
   id i32
 }
