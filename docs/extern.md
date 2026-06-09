@@ -1,7 +1,7 @@
 
 The extern keyword has similar meaning in all its current use cases
 
-### Functions
+## Functions
 
 An `extern` function is declared with this syntax
 
@@ -30,7 +30,7 @@ The type after the ellipsis (`...`) may also be a special
 lets the variadic arguments be of any type. This feature
 was added for compatibility with libc's `printf` function.
 
-### Structs
+## Structs
 
 An `extern struct` exists just for the purpose of interacting with
 libraries written for C. An example might be the `Color` struct from

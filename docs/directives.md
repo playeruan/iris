@@ -4,7 +4,7 @@ directives are special keywords which don't get translated into any
 intructions but tell the compiler some information, usually useful 
 for compatibility with C 
 
-### link
+## link
 
 the `#link` directive simply tells the compiler to link with a specific
 library when calling clang after having generated C code.
@@ -18,7 +18,7 @@ this example.
 
 means clang will get called with the `-lraylib` flag later.
 
-### extname
+## extname
 
 the `#extname` directive is again useful when creating bindings.
 it's used to specify what the original name of an `extern` function

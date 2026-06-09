@@ -1,14 +1,7 @@
-include "bindings/libc.iris"
-include "std/constraints.iris"
-
-generic T: Numeric 
-add: (x: T, y: T) -> T {
-  ret x+y;
-}
 
 main: () -> i32 {
-  a: i32 = add(10, 15);
-  b: f32 = add(10.5, 15.0);
-  printf("%d %f\n", a, b);
+
+  // comment
+  // comment
   ret 0;
 }

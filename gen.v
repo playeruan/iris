@@ -239,6 +239,8 @@ fn (mut g Generator) gen_stmt(s Stmt) {
         g.tabs++
         if sym.type.ret != Type(TypePrimitive{type: .void}) {
           g.write_tabbed("return ")
+        } else {
+          g.write_tabbed("")
         }
         g.gend_main.write_string("${name}(") 
         mut wrap_argv := ""

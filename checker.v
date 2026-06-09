@@ -817,11 +817,17 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
       if stmt.decl !is StmtDeclFunc && stmt.decl !is StmtDeclStruct {
         c.checker_error("only functions and structs can be declared with generics")
       }
+      
       sym := match stmt.decl {
         StmtDeclFunc    {stmt.decl.sym}
         StmtDeclStruct  {stmt.decl.sym}
         else            {c.checker_error("unreachable ${@LINE}")}
-      } 
+      }
+
+      if sym.qualifs.contains(.extern) {
+        c.checker_error("cannot use generic for extern symbols")
+      }
+      
       c.register_generic(sym.name, stmt.type_params, stmt.constraints, stmt.decl)
       c.generic_params = stmt.type_params
       c.register_sym(c.resolve_sym_types(sym))

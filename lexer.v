@@ -135,7 +135,7 @@ fn (mut l Lexer) next_tok() Token {
   }
 
   mut c := l.peek()
-  if c == `/` && l.peek_next() == `/` {
+  for c == `/` && l.peek_next() == `/` {
     l.skip_comment()
     l.skip_space()
     c = l.peek()
