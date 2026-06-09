@@ -123,7 +123,12 @@ fn (mut g Generator) gen_expr(e Expr) string {
         s
       }
       ExprLiteralStruct {
-        mut s := "(${g.gen_type_left(e.type, false)}){"
+        t := if e.id in g.checked_ast.resolved {
+          g.checked_ast.resolved[e.id]
+        } else {
+          Type(e.type)
+        }
+        mut s := "(${g.gen_type_left(t, false)}){"
         for argv in e.argv {
           s += g.gen_expr(argv)
           if argv != e.argv[e.argv.len-1] {
@@ -188,9 +193,6 @@ fn (mut g Generator) gen_stmt(s Stmt) {
       g.writeln_tabbed("${g.gen_type_left(sym.type, false)} ${g.mangle_ident(s.sym.name)}${g.gen_type_right(sym.type, false)} = ${g.gen_expr(s.value)};")
     }
     StmtDeclFunc {
-      if s.id in g.checked_ast.generic_decls {
-        return 
-      }
       sym := if s in g.checked_ast.monomorph_decls {
         s.sym 
       } else {
@@ -251,9 +253,6 @@ fn (mut g Generator) gen_stmt(s Stmt) {
     StmtContinue  {g.writeln_tabbed("continue;")}
     StmtBreak     {g.writeln_tabbed("break;")}
     StmtDeclStruct {
-      if s.id in g.checked_ast.generic_decls {
-        return 
-      }
       resolved_sym := g.checked_ast.table.structs[s.sym.name] or {g.gen_error("couldn't find struct ${s.sym.name} in symtable")}
       if s.sym.qualifs.contains(.extern) {
         g.gend_struct_decl.writeln("#define ${g.mangle_ident(s.sym.name)} ${s.sym.name}")
@@ -312,9 +311,7 @@ fn (mut g Generator) gen_stmt(s Stmt) {
       }
     }
     StmtDeclConstraint {}
-    StmtGeneric {
-      g.gen_stmt(s.decl)
-    }
+    StmtGeneric {}
     //else {g.gen_error("unimplemented stmt ${s}")}
   }
 }

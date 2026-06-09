@@ -151,7 +151,7 @@ struct StmtDeclConstraint {
 }
 
 struct StmtGeneric {
-  name string
+  type_params []string
   decl Stmt
   span Span
   id i32

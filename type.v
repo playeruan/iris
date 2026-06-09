@@ -124,6 +124,8 @@ struct TypeArray {
 struct TypeStruct {
   qualifs []TypeQualifier
   name string 
+  generic_args []Type
+  generic_base ?string // none for non-generic structs
 }
 
 struct TypeEnum {
@@ -144,6 +146,7 @@ struct TypeGeneric {
 struct TypeUnresolved {
   qualifs []TypeQualifier
   name string
+  generic_args []Type
 }
 
 fn (t Type) str() string {
@@ -242,7 +245,7 @@ fn (t Type) unqual() Type {
     TypeFunc {TypeFunc {qualifs: [], arg_types: t.arg_types, arg_names: t.arg_names, ret: t.ret}}
     TypePointer {TypePointer{qualifs: [], inner: t.inner}}
     TypeArray {TypeArray{qualifs: [], inner: t.inner}}
-    TypeStruct {TypeStruct{qualifs: [], name: t.name}}
+    TypeStruct {TypeStruct{qualifs: [], name: t.name, generic_args: t.generic_args, generic_base: t.generic_base}}
     TypeEnum {TypeEnum{qualifs: [], name: t.name, as: t.as}}
     TypeUnresolved{TypeUnresolved{qualifs: [], name: t.name}}
     TypeGeneric {TypeGeneric{qualifs: [], name: t.name}}
@@ -251,7 +254,7 @@ fn (t Type) unqual() Type {
 
 fn (t TypePointer) pointer_depth() i32 {
   mut t_ := Type(t)
-  mut i := 1;
+  mut i := 0;
   for t_ is TypePointer {
     t_ = t_.inner
     i++;
@@ -288,6 +291,72 @@ fn (t Type) get_generic_name() string {
     TypeArray {t.inner.get_generic_name()}
     else {panic("invalid tried to get generic name of type ${t}")}
   }
+}
+
+fn mangle_monomorph_name(base string, subst map[string]Type) string {
+  mut keys := subst.keys()
+  keys.sort()
+  mut name := base
+  for k in keys {
+    sub := subst[k] or {panic("unreachable")}
+    name += "_${sub.unqual().compact_str()}"
+  }
+  return name
+}
+
+fn infer_into_subst(type_params []string, param_t Type, arg_t Type, mut subst map[string]Type) ! {
+  match param_t {
+    TypeGeneric {
+      if param_t.name in type_params {
+        if param_t.name in subst {
+          sub := subst[param_t.name] or { panic("unreachable") }
+          j := join_types(sub, arg_t.unqual()) or {
+            return error("contradictory inference for ${param_t.name}: got ${arg_t} and ${sub}")
+          }
+          subst[param_t.name] = j
+        } else {
+          subst[param_t.name] = arg_t.unqual()
+        }
+      }
+    }
+    TypePointer {
+      if arg_t is TypePointer {
+        infer_into_subst(type_params, param_t.inner, arg_t.inner, mut subst)!
+      } else {
+        return error("expected more (${param_t.pointer_depth()}) nested pointer type, got ${arg_t}")
+      }
+    }
+    TypeArray {
+      if arg_t is TypeArray {
+        infer_into_subst(type_params, param_t.inner, arg_t.inner, mut subst)!
+      } else {
+        return error("expected array type, got ${arg_t}")
+      }
+    }
+    TypeStruct {
+      if arg_t is TypeStruct && param_t.generic_args.len > 0 {
+        for i, ga in param_t.generic_args {
+          if i < arg_t.generic_args.len {
+            infer_into_subst(type_params, ga, arg_t.generic_args[i], mut subst)!
+          }
+        }
+      }
+    }
+    else {}
+  }
+}
+
+fn infer_type_args(type_params []string, param_types []Type, arg_types []Type) !map[string]Type {
+  mut subst := map[string]Type{}
+  for i, param_t in param_types {
+    infer_into_subst(type_params, param_t, arg_types[i], mut subst)!
+  }
+  for tp in type_params {
+    if tp !in subst {
+      return error("could not infer type argument for ${tp}")
+    }
+  }
+  return subst
 }
 
 fn (t Type) collapse_generic(gen_name string, type Type) Type {
@@ -364,7 +433,7 @@ fn are_types_equal(a Type, b Type) bool {
       false // unresolved type cannot be equal
     }
     TypeGeneric {
-      ub is TypeGeneric && ua.name == ub.name
+      false // doesn't need to be aware
     }
   }
 }
@@ -410,13 +479,26 @@ fn join_types(a Type, b Type) ?Type {
   }
 
   if ua is TypePointer && ub is TypePointer {
-    if are_types_equal(ua.inner, TypePrimitive{type: .void}) {return ub}
-    if are_types_equal(ub.inner, TypePrimitive{type: .void}) {return ua}
+    if are_types_equal(ua.inner, TypePrimitive{type: .void}) { return ub }
+    if are_types_equal(ub.inner, TypePrimitive{type: .void}) { return ua }
+    j := join_types(ua.inner, ub.inner) or { return none }
+    return TypePointer{ qualifs: ua.qualifs, inner: j }
   }
 
-  if ua is TypeGeneric && ub !is TypeGeneric {return ub}
-  if ub is TypeGeneric && ua !is TypeGeneric {return ua}
-  // shouldn't be possible ^^ must be collapsed before checking
+  if ua is TypeStruct && ub is TypeStruct {
+    if ua.name == ub.name { return ua }
+    base_a := ua.generic_base or { return none }
+    base_b := ub.generic_base or { return none }
+    if base_a != base_b { return none }
+    if ua.generic_args.len != ub.generic_args.len { return none }
+    mut joined_args := []Type{}
+    for i, ga in ua.generic_args {
+        joined_args << join_types(ga, ub.generic_args[i]) or { return none }
+    }
+    mut subst := map[string]Type{}
+    for i, ja in joined_args { subst["_${i}"] = ja }
+    return TypeStruct{name: mangle_monomorph_name(base_a, subst), generic_args: joined_args, generic_base: base_a}
+}
 
   return none
 }
@@ -432,7 +514,24 @@ fn cast_types(from Type, to Type) ?Type {
   }
 
   if uf is TypePrimitive && ut is TypePrimitive {
-    return none // TODO: handle
+    if uf.type.is_int() && ut.type.is_float() {return ut}
+    if uf.type.is_int() && ut.type.is_int() {
+      if uf.type.is_unsigned() != ut.type.is_unsigned() {
+        // TODO: handle signedness
+      }
+      if uf.type.size() < ut.type.size() {
+        return ut
+      } else {
+        none
+      }
+    } else if uf.type.is_float() && uf.type.is_float() {
+      if uf.type.size() < ut.type.size() {
+        return ut
+      } else {
+        none
+      }
+    }
+    return none 
   }
 
   if uf is TypeEnum && ut == uf.as {

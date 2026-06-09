@@ -31,6 +31,7 @@ struct ExprLiteralPrimitive {
 
 struct ExprLiteralStruct {
   type TypeStruct
+  generic_args []Type
   argv []Expr
   id i32
 }

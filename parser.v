@@ -131,8 +131,17 @@ fn (mut p Parser) parse_primary() Expr {
       } 
     }
     .identifier {
-      if t.text.starts_with_capital() && p.peek().kind == .lparen {
+      if t.text.starts_with_capital() && (p.peek().kind == .lparen || p.peek().kind == .o_lt) {
         // Struct instanciation
+        mut generic_args := []Type{}
+        if p.peek().kind == .o_lt { // smth like MyStruct<i32, i32>
+          p.advance()
+          for p.peek().kind != .o_gt {
+            generic_args << p.parse_type()
+            if p.peek().kind == .comma { p.advance() }
+          }
+          p.expect(.o_gt)
+        }
         p.expect(.lparen)
         mut argv := []Expr{}
         for p.peek().kind != .rparen {
@@ -147,6 +156,7 @@ fn (mut p Parser) parse_primary() Expr {
             qualifs: [.const]
             name: t.text
           }
+          generic_args: generic_args
           argv: argv
           id: p.next_id()
         }
@@ -667,11 +677,16 @@ fn (mut p Parser) parse_stmt() Stmt {
     }
     .generic {
       p.advance()
-      name := p.expect(.identifier).text
+      mut names := []string{}
+      names << p.expect(.identifier).text
+      for p.peek().kind == .comma {
+        p.expect(.comma)
+        names << p.expect(.identifier).text
+      }
       decl := p.parse_stmt()
       p.generic_defs[decl.id] = decl
       StmtGeneric {
-        name: name
+        type_params: names
         decl: decl
         span: p.span
         id: p.next_id()
@@ -736,10 +751,20 @@ fn (mut p Parser) parse_type() Type {
     }
   } else {
     tok_name := p.advance()
+    mut generic_args := []Type{}
+    if p.peek().kind == .o_lt {
+      p.advance()
+      for p.peek().kind != .o_gt {
+        generic_args << p.parse_type()
+        if p.peek().kind == .comma {p.advance()}
+      }
+      p.expect(.o_gt)
+    }
     // may be struct or enum
     return TypeUnresolved {
       qualifs: qualifs
       name: tok_name.text
+      generic_args: generic_args
     }
   }
 }
