@@ -1,7 +1,27 @@
+include "bindings/libc.iris"
+
+struct Vec2 {
+  x: i32;
+  y: i32;
+}
+
+struct Vec3 {
+  x: i32;
+  y: i32;
+  z: i32;
+}
+
+constraint Vector = [Vec2, Vec3];
+
+generic V: Vector
+get_x: (v: V) -> i32 {
+  ret v.x;
+}
 
 main: () -> i32 {
-
-  // comment
-  // comment
+  v2: Vec2 = Vec2(2, 0);
+  v3: Vec3 = Vec3(1, 1, 1);
+  x: i32 = get_x(v2) + get_x(v3);
+  printf("%d\n", x);
   ret 0;
 }

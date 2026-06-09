@@ -217,10 +217,10 @@ fn (t Type) compact_str() string {
        t.type.str()
     }
     TypeStruct {
-      "s_${t.name}"
+      "s_${t.name.to_lower()}"
     }
     TypeEnum{ 
-      "e_${t.name}"
+      "e_${t.name.to_lower()}"
     } 
     TypeFunc {
       mut s := "fn_"
@@ -239,10 +239,10 @@ fn (t Type) compact_str() string {
       "a_${t.inner.compact_str()}"
     }
     TypeUnresolved {
-      "u_${t.name}"
+      "u_${t.name.to_lower()}"
     }
     TypeGeneric {
-      "g_${t.name}"
+      "g_${t.name.to_lower()}"
     }
   }
   return type_str
