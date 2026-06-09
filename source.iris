@@ -1,139 +1,26 @@
-include "bindings/libc.iris"
-
-generic T
-struct Box {
-    val: T;
-}
-
-generic K, V
-struct Pair {
-    key: K;
-    val: V;
-}
-
-generic T
-struct Stack {
-    val:  T;
-    next: ^Stack<T>;
-}
-
-generic T
-identity: (x: T) -> T {
-    ret x;
-}
-
-generic T
-deref_val: (p: ^T) -> T {
-    ret ^p;
-}
-
-generic T
-deref_deref_val: (pp: ^^T) -> T {
-    ret ^^pp;
-}
-
-generic K, V
-make_pair: (k: K, v: V) -> Pair<K, V> {
-    ret Pair<K, V>(k, v);
-}
-
-generic T
-unbox: (b: Box<T>) -> T {
-    ret b.val;
-}
-
-generic T
-unbox_ptr: (b: ^Box<T>) -> T {
-    ret b..val;
-}
-
-generic T
-swap_box: (a: Box<T>, b: Box<T>) -> Box<T> {
-    tmp: Box<T> = a;
-    ret tmp;
-}
-
-generic T
-first_of_two: (a: T, b: T) -> T {
-    ret a;
-}
-
-generic T
-stack_push: (top: ^^Stack<T>, val: T) {
-    node: ^Stack<T> = malloc(sizeof(Stack<T>));
-    node..val  = val;
-    node..next = ^top;
-    ^top = node;
-}
-
-generic T
-stack_pop: (top: ^^Stack<T>) -> T {
-    ret_val: T = (^^top).val;
-    ^top = (^^top).next;
-    ret ret_val;
-}
+include "std/dynamic_array.iris"
 
 main: () -> i32 {
+  da: DynamicArray<f32> = da_create([1.0, 2.0, 3.0, 4.5, 5.5], 5);
+  da_append(&da, 6.9);
+  da_append(&da, 7.7);
+  da_append(&da, 8.8);
+  da_prepend(&da, 9.99);
 
-    b_int:  Box<i32>  = Box<i32>(42);
-    b_bool: Box<bool> = Box<bool>(true);
-    printf("Box<i32>.val         = %d\n", b_int.val);
-    printf("Box<bool>.val        = %d\n", b_bool.val);
+  da_insert(&da, 11, 10.0);
+  i: i32 = 0;
+  while i < da.capacity {
+    if i <= da.size {
+      printf("a[%d] = %f\n", i, da_at(da, i));
+    } elif da_at(da, i) != 0.0 {
+      printf("a[%d] = %f \n", i, da_at(da, i));
+    } else {
+      printf("a[%d] = (empty) \n", i, da_at(da, i));
+    }
+    ++i;
+  }
 
-    p1: Pair<i32, bool> = Pair<i32, bool>(7, true);
-    p2: Pair<u8, i32>   = Pair<u8, i32>(255, -1);
-    printf("Pair<i32,bool>       = %d %d\n", p1.key, p1.val);
-    printf("Pair<u8,i32>         = %d %d\n", p2.key, p2.val);
-
-    id_i: i32  = identity(99);
-    id_b: bool = identity(false);
-    printf("identity(i32)        = %d\n", id_i);
-    printf("identity(bool)       = %d\n", id_b);
-
-    x_i32: i32 = 123;
-    dv: i32 = deref_val(&x_i32);
-    printf("deref_val(^i32)      = %d\n", dv);
-
-    x_u8: u8  = 200;
-    px:   ^u8 = &x_u8;
-    ddv: u8 = deref_deref_val(&px);
-    printf("deref_deref(^^u8)    = %d\n", ddv);
-
-    mp: Pair<i32, bool> = make_pair(3@i32, true);
-    printf("make_pair(i32,bool)  = %d %d\n", mp.key, mp.val);
-
-    b2: Box<i32> = Box<i32>(77);
-    ub: i32 = unbox(b2);
-    printf("unbox(Box<i32>)      = %d\n", ub);
-
-    b3:  Box<u8> = Box<u8>(88);
-    ubp: u8 = unbox_ptr(&b3);
-    printf("unbox_ptr(^Box<u8>)  = %d\n", ubp);
-
-    ba: Box<i32> = Box<i32>(1);
-    bb: Box<i32> = Box<i32>(2);
-    sb: Box<i32> = swap_box(ba, bb);
-    printf("swap_box             = %d\n", sb.val);
-
-    f1: i32  = first_of_two(10, 20);
-    f2: bool = first_of_two(true, false);
-    printf("first_of_two(i32)    = %d\n", f1);
-    printf("first_of_two(bool)   = %d\n", f2);
-
-    st: ^Stack<i32> = nullptr;
-    stack_push(&st, 100);
-    stack_push(&st, 200);
-    stack_push(&st, 300);
-    v1: i32 = stack_pop(&st);
-    v2: i32 = stack_pop(&st);
-    v3: i32 = stack_pop(&st);
-    printf("stack<i32> pop order = %d %d %d\n", v1, v2, v3);
-
-    st8: ^Stack<u8> = nullptr;
-    stack_push(&st8, 10);
-    stack_push(&st8, 20);
-    r8: u8 = stack_pop(&st8);
-    printf("stack<u8> pop        = %d\n", r8);
-
-    ret 0;
+  da_free(&da);
+  
+  ret 0;
 }

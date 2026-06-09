@@ -31,7 +31,6 @@ fn (mut p Parser) next_id() i32 {
 @[noreturn]
 fn (p Parser) parse_error(s string) {
   eprintln("${p.span} Parser Error -> \"${s}\"")
-  eprintln("current AST tree ${p.ast}")
 	exit(1)
 }
 
@@ -205,7 +204,7 @@ fn (mut p Parser) parse_primary() Expr {
     .sizeof {
       p.expect(.lparen)
       es := ExprSizeof{
-        type: p.parse_type()
+        expr: p.parse_expr(.literal)
         id: p.next_id()
       }
       p.expect(.rparen)

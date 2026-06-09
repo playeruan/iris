@@ -328,16 +328,39 @@ fn (mut c Checker) check_expr(expr Expr) Type {
     ExprLiteralNullptr {TypePointer{inner: TypePrimitive{type: .void}}}
     ExprType {TypePrimitive{type: .type}}
     ExprLiteralPrimitive {expr.type} // no need to resolve because it's always known here
-    ExprLiteralArray { if expr.argv.len > 0 {TypeArray{inner: c.check_expr(expr.argv[0])}} else {TypeArray{inner: TypePrimitive{type: .void}}} }
-    ExprGroup {c.check_expr(expr.inner)}
-    ExprSizeof {
-      t := c.resolve_type(expr.type)
-      c.result.resolved[expr.id] = t
-      match t {
-        TypePrimitive, TypeStruct, TypeEnum {}
-        else {c.checker_error("cannot get sizeof ${t}")}
+    ExprLiteralArray {
+      mut elem_t := Type(TypePrimitive{type: .void})
+      for argv in expr.argv {
+        t := c.check_expr(argv)
+        if elem_t is TypePrimitive && elem_t.type == .void {
+          elem_t = t
+        } else {
+          j := join_types(elem_t, t) or { c.checker_error("inconsistent types in array literal (${elem_t} and ${t})") }
+          elem_t = j
+        } 
       }
-      TypePrimitive{type: .u32}
+      c.result.resolved[expr.id] = TypeArray{inner: elem_t}
+      return TypeArray{inner: elem_t}
+    } 
+    ExprGroup {c.check_expr(expr.inner)}
+
+    ExprSizeof {
+      match expr.expr {
+        ExprVar {
+          is_type := expr.expr.name in c.generic_params
+            || expr.expr.name in c.table.structs
+            || expr.expr.name in c.generic_decls
+            || is_builtin_type(expr.expr.name)
+          if is_type {
+            resolved := c.resolve_type(TypeUnresolved{name: expr.expr.name})
+            c.result.resolved[expr.id] = resolved
+            return TypePrimitive{type: .u32}
+          }
+          c.check_expr(expr.expr)
+        } 
+        else { c.check_expr(expr.expr) }
+      }
+      return TypePrimitive{type: .u32}
     }
 
     ExprLiteralStruct {
@@ -694,7 +717,7 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
     StmtBranch {
       guard_t := c.check_expr(stmt.if_guard)
       j := join_types(guard_t, Type(TypePrimitive{type: .bool})) or {
-        c.checker_error("if and elif guards must be of type bool")
+        c.checker_error("if guards must be of type bool, got ${guard_t}")
       }
       if !are_types_equal(guard_t, j) {
         c.result.implicit_casts[stmt.if_guard.id] = j
@@ -708,10 +731,13 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
           b := stmt.elif_blocks[i]
 
           c.check_stmt_block(b)
-          if c.check_expr(g) != Type(TypePrimitive{qualifs: [.const], type: .bool}) {
-            c.checker_error("if and elif guards must be of type bool")
+          if !are_types_equal(c.check_expr(g), Type(TypePrimitive{qualifs: [.const], type: .bool})) {
+            c.checker_error("elif guards must be of type bool, got ${c.check_expr(g)}")
           }
         }
+      }
+      if stmt.else_block != none {
+        c.check_stmt_block(stmt.else_block)
       }
     }
 

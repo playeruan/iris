@@ -33,6 +33,15 @@ enum BuiltinType as u8 {
   any
 }
 
+fn is_builtin_type(s string) bool {
+  return [
+    "void", "i8", "i16", "i32",
+    "u8", "u16", "u32", "f32", 
+    "f64", "bool", "string", "type",
+    "any"
+  ].contains(s)
+}
+
 fn BuiltinType.from_tok_kind(t TokKind) BuiltinType {
   return match t {
     .t_i32    {BuiltinType.i32}

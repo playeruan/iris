@@ -104,6 +104,6 @@ struct ExprUnary {
 }
 
 struct ExprSizeof {
-  type Type
+  expr Expr 
   id i32
 }

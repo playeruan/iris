@@ -12,6 +12,7 @@ struct Generator {
   gend_fn_decl strings.Builder
   gend_struct_decl strings.Builder
   gend_main strings.Builder
+  gend_globals strings.Builder
 
   span Span
 
@@ -103,12 +104,11 @@ fn (mut g Generator) gen_expr(e Expr) string {
         "(*${g.gen_expr(e.inner)})"
       }
       ExprSizeof {
-        t := if e.id in g.checked_ast.resolved {g.checked_ast.resolved[e.id]} else {e.type}
-        match t {
-          TypePrimitive {t.type.size().str()}
-          TypeStruct {"sizeof(${g.gen_type_left(t, false)})"}
-          else {g.gen_error("not possible to get sizeof ${t}")}
+        if e.id in g.checked_ast.resolved {
+          t := g.checked_ast.resolved[e.id] or { TypePrimitive{type: .void} }
+          return "(sizeof(${g.gen_type_left(t, false)}))"
         }
+        return "(sizeof(${g.gen_expr(e.expr)}))"
       }
       ExprLiteralPrimitive {
         s := match e.type.type {
@@ -137,16 +137,18 @@ fn (mut g Generator) gen_expr(e Expr) string {
         }
         s + "}"
       }
+
       ExprLiteralArray {
-        mut s := "{"
-        for argv in e.argv {
+        t := g.checked_ast.resolved[e.id] or { TypePrimitive{type: .void} }
+        elem_t := if t is TypeArray { t.inner } else { Type(TypePrimitive{type: .void}) }
+        mut s := "(${g.gen_type_left(elem_t, false)}[]){"
+        for i, argv in e.argv {
           s += g.gen_expr(argv)
-          if argv != e.argv[e.argv.len-1] {
-            s += ", "
-          }
+          if i < e.argv.len - 1 { s += ", " }
         }
-        s + "}"
+        return s + "}"
       }
+      
       ExprCall {
         callee_name := if e.id in g.checked_ast.resolved_calls {
           g.mangle_ident(g.checked_ast.resolved_calls[e.id])
@@ -190,7 +192,11 @@ fn (mut g Generator) gen_stmt(s Stmt) {
     }
     StmtDeclVar {
       sym := g.current_scope.lookup_sym(s.sym.name) or {g.gen_error("forgot to register a symbol")}
-      g.writeln_tabbed("${g.gen_type_left(sym.type, false)} ${g.mangle_ident(s.sym.name)}${g.gen_type_right(sym.type, false)} = ${g.gen_expr(s.value)};")
+      if g.current_scope.parent == none {
+        g.gend_globals.writeln("${g.gen_type_left(sym.type, false)} ${g.mangle_ident(s.sym.name)}${g.gen_type_right(sym.type, false)} = ${g.gen_expr(s.value)};")
+      } else {
+        g.writeln_tabbed("${g.gen_type_left(sym.type, false)} ${g.mangle_ident(s.sym.name)}${g.gen_type_right(sym.type, false)} = ${g.gen_expr(s.value)};")
+      }
     }
     StmtDeclFunc {
       sym := if s in g.checked_ast.monomorph_decls {
@@ -330,6 +336,7 @@ fn Generator.gen_program(checked_ast CheckedAST) GeneratorResult {
   g.gend_includes.writeln("#include <stdio.h>")
   g.gend_includes.writeln("#include <stdint.h>")
   g.gend_includes.writeln("#include <stdlib.h>")
+  g.gend_includes.writeln("#include <string.h>")
   g.gend_includes.writeln("#include <math.h>")
   g.gend_includes.writeln("#include <raylib.h>")
 
@@ -338,6 +345,7 @@ fn Generator.gen_program(checked_ast CheckedAST) GeneratorResult {
   mut generated := ""
   generated += g.gend_includes.str()
   generated += "// -- types --\n${g.gend_struct_decl}"
+  generated += "// -- globals --\n${g.gend_globals}"
   generated += "// -- fn decl --\n${g.gend_fn_decl}"
   generated += "// -- program --\n${g.gend_main.str()}"
 

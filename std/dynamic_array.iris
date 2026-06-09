@@ -1,0 +1,91 @@
+include "bindings/libc.iris"
+
+generic T
+struct DynamicArray {
+  array: ^T;
+  capacity: i32;
+  size: i32;
+}
+
+
+generic T
+da_create: (init_vals: []T, init_size: i32) -> DynamicArray<T> {
+  MIN_CAPACITY: const i32 = 4;
+  SIZE: const i32 = init_size;
+
+  da: DynamicArray<T> = DynamicArray<T>(nullptr, MIN_CAPACITY, 0);
+  da.array = malloc(sizeof(T)*MIN_CAPACITY);
+
+  while SIZE >= da.capacity {
+    da_grow(&da);
+  }
+  i: i32 = 0;
+  while i < SIZE {
+    da.array[i] = init_vals[i];
+    ++i;
+  }
+  da.size = SIZE;
+  ret da;
+}
+
+generic T 
+da_grow: (da: ^DynamicArray<T>) {
+  da..capacity *= 2;
+  da..array = realloc(da..array, sizeof(T)*da..capacity);
+}
+
+generic T
+da_append: (da: ^DynamicArray<T>, val: T) {
+  if da == nullptr {ret;}
+  if da..size == 0 && da..capacity == 0 {
+    // freed but reused, just re-create it
+    ^da = da_create([val], 1);
+    ret;
+  }
+  if da..size+1 >= da..capacity {
+    da_grow(da);
+  }
+  da..array[da..size] = val;
+  ++da..size;
+}
+
+generic T
+da_prepend: (da: ^DynamicArray<T>, val: T) {
+  if da == nullptr {ret;}
+  if da..size == 0 && da..capacity == 0 {
+    // freed but reused, just re-create it
+    ^da = da_create([val], 1);
+    ret;
+  }
+  if da..size+1 >= da..capacity {
+    da_grow(da);
+  }
+  memmove(da..array+1, da..array, (da..capacity-1)*sizeof(T));
+  da..array[0] = val;
+}
+
+generic T 
+da_insert: (da: ^DynamicArray<T>, idx: i32, val: T) {
+  while idx > da..capacity {
+    da_grow(da);
+  }
+  da..array[idx] = val;
+  if da..size < idx {
+    da..size = idx;
+  }
+}
+
+generic T
+da_free: (da: ^DynamicArray<T>) {
+  if da == nullptr || da..array == nullptr {
+    ret;
+  }
+  da..capacity = 0;
+  da..size = 0;
+  free(da..array);
+}
+
+generic T
+da_at: (da: DynamicArray<T>, idx: i32) -> T {
+  ret da.array[idx];
+}
