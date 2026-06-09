@@ -99,7 +99,7 @@ main: () -> i32 {
     ddv: u8 = deref_deref_val(&px);
     printf("deref_deref(^^u8)    = %d\n", ddv);
 
-    mp: Pair<i32, bool> = make_pair(3, true);
+    mp: Pair<i32, bool> = make_pair(3@i32, true);
     printf("make_pair(i32,bool)  = %d %d\n", mp.key, mp.val);
 
     b2: Box<i32> = Box<i32>(77);
