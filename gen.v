@@ -31,10 +31,12 @@ fn (g Generator) gen_error(s string) {
 }
 
 fn (mut g Generator) writeln_tabbed(s string) {
+  g.gend_main.writeln("\t".repeat(g.tabs)+"#line ${g.span.row} \"${g.span.file}\"")
   g.gend_main.writeln("\t".repeat(g.tabs)+s)
 }
 
 fn (mut g Generator) write_tabbed(s string) {
+  g.gend_main.writeln("\t".repeat(g.tabs)+"#line ${g.span.row} \"${g.span.file}\"")
   g.gend_main.write_string("\t".repeat(g.tabs)+s)
 }
 

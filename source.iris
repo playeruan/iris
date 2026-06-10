@@ -1,9 +1,12 @@
 include "bindings/libc.iris"
 
-foo: pure (X: const i32) -> i32 {
-  ret X;
+generic T
+struct Vec2 {
+  x: T;
+  y: T;
 }
 
 main: () -> i32 {
+  V: const Vec2<i32> = Vec2<i32>(1, 2);
   ret 0;
 }
