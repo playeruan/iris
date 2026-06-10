@@ -111,7 +111,7 @@ fn (mut c Checker) clone_expr(e Expr) Expr {
     ExprBinary         { ExprBinary{...e,          id: c.next_id(), left: c.clone_expr(e.left), right: c.clone_expr(e.right)} }
     ExprCast           { ExprCast{...e,            id: c.next_id(), castee: c.clone_expr(e.castee)} }
     ExprType           { ExprType{...e,            id: c.next_id()} }
-    ExprSizeof         { ExprSizeof{...e,          id: c.next_id()} }
+    ExprSizeof { ExprSizeof{...e, id: c.next_id(), expr: c.clone_expr(e.expr)} }
   }
 }
 
@@ -179,17 +179,20 @@ fn (mut c Checker) enforce_constraints(name string, substitution map[string]Type
   return false
 }
 
-fn (mut c Checker) begin_instantiation(gdecl GenericDecl, subst map[string]Type) (map[string]Type, []string) {
-  old_subst := c.generic_subst.clone()
+fn (mut c Checker) begin_instantiation(gdecl GenericDecl, subst map[string]Type) (map[string]Type, []string, &Scope) {
+  old_subst  := c.generic_subst.clone()
   old_params := c.generic_params.clone()
-  c.generic_subst = subst.clone()
+  old_scope  := c.current_scope
+  c.generic_subst  = subst.clone()
   c.generic_params = gdecl.type_params
-  return old_subst, old_params
+  c.current_scope  = c.table.root_scope
+  return old_subst, old_params, old_scope
 }
 
-fn (mut c Checker) end_instantiation(old_subst map[string]Type, old_params []string) {
-  c.generic_subst = old_subst.clone()
+fn (mut c Checker) end_instantiation(old_subst map[string]Type, old_params []string, old_scope &Scope) {
+  c.generic_subst  = old_subst.clone()
   c.generic_params = old_params
+  c.current_scope  = old_scope
 }
 
 fn (mut c Checker) instantiate_func(name string, subst map[string]Type) !StmtDeclFunc {
@@ -202,14 +205,15 @@ fn (mut c Checker) instantiate_func(name string, subst map[string]Type) !StmtDec
   mut cloned := c.clone_stmt(gdecl.decl) as StmtDeclFunc
 
   cloned = StmtDeclFunc{...cloned, sym: SymbolFunc{...(cloned.sym as SymbolFunc), name: mangled}}
-  old_subst, old_params := c.begin_instantiation(gdecl, subst)
+  old_subst, old_params, old_scope := c.begin_instantiation(gdecl, subst)
   cloned = StmtDeclFunc{...cloned, sym: c.resolve_sym_types(cloned.sym)}
-
+  
+  c.mono_cache.funcs[mangled] = cloned
+  
   c.check_stmt(cloned)
-  c.end_instantiation(old_subst, old_params)
+  c.end_instantiation(old_subst, old_params, old_scope)
 
   c.result.monomorph_decls << cloned
-  c.mono_cache.funcs[mangled] = cloned
   return cloned 
 }
 
@@ -223,7 +227,7 @@ fn (mut c Checker) instantiate_struct(name string, subst map[string]Type) !StmtD
   mut cloned := c.clone_stmt(gdecl.decl) as StmtDeclStruct
 
   cloned = StmtDeclStruct{...cloned, sym: SymbolStruct{...(cloned.sym as SymbolStruct), name: mangled, type: TypeStruct{name: mangled}}}
-  old_subst, old_params := c.begin_instantiation(gdecl, subst)
+  old_subst, old_params, old_scope := c.begin_instantiation(gdecl, subst)
 
   c.table.structs[mangled] = cloned.sym as SymbolStruct
   c.mono_cache.structs[mangled] = cloned
@@ -235,10 +239,10 @@ fn (mut c Checker) instantiate_struct(name string, subst map[string]Type) !StmtD
 
   c.result.monomorph_decls << cloned
 
-  c.check_stmt(cloned)
-  c.end_instantiation(old_subst, old_params)
-
   c.mono_cache.structs[mangled] = cloned
+  c.check_stmt(cloned)
+  c.end_instantiation(old_subst, old_params, old_scope)
+
   return cloned 
 }
 
@@ -365,6 +369,19 @@ fn (mut c Checker) check_expr(expr Expr) Type {
 
     ExprSizeof {
       match expr.expr {
+        ExprType {
+          resolved := c.resolve_type(expr.expr.type)
+          // if it's a generic struct, instantiate it
+          if resolved is TypeStruct && resolved.generic_args.len > 0 {
+            base := resolved.generic_base or { c.checker_error("unreachable") }
+            mut subst := map[string]Type{}
+            gdecl := c.generic_decls[base] or { c.checker_error("${base} is not a generic type") }
+            for i, tp in gdecl.type_params { subst[tp] = resolved.generic_args[i] }
+              c.instantiate_struct(base, subst) or { c.checker_error("could not instantiate ${base}: ${err}") }
+            }
+            c.result.resolved[expr.id] = resolved
+            return TypePrimitive{type: .u32}
+          }
         ExprVar {
           is_type := expr.expr.name in c.generic_params
             || expr.expr.name in c.table.structs
@@ -376,7 +393,7 @@ fn (mut c Checker) check_expr(expr Expr) Type {
             return TypePrimitive{type: .u32}
           }
           c.check_expr(expr.expr)
-        } 
+        }
         else { c.check_expr(expr.expr) }
       }
       return TypePrimitive{type: .u32}

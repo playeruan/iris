@@ -204,7 +204,16 @@ fn (mut p Parser) parse_primary() Expr {
     .sizeof {
       p.expect(.lparen)
       es := ExprSizeof{
-        expr: p.parse_expr(.literal)
+        expr: if p.peek().kind.is_type_qualifier()
+          || p.peek().kind.is_primitive_type()
+          || p.peek().kind == .o_caret
+          || p.peek().kind == .lsquare
+          || (p.peek().kind == .identifier && p.peek().text.starts_with_capital())
+          || (p.peek().kind == .identifier && p.peek_next().kind == .rparen) {
+          ExprType{type: p.parse_type(), id: p.next_id()}
+        } else {
+          p.parse_expr(.literal)
+        }
         id: p.next_id()
       }
       p.expect(.rparen)

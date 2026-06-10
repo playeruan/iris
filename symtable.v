@@ -35,6 +35,7 @@ struct SymbolEnum {
 
 // -- Scope
 
+@[heap]
 struct Scope {
   parent ?&Scope
   mut:
