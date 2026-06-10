@@ -1,7 +1,8 @@
 include "bindings/libc.iris"
 
 main: () -> i32 {
-  s: ^u8 = "World!";
+  s: []i8 = "World!";
+  s2: ^i8 = s;
   printf("Hello, %s\n", s);
   ret 0;
 }

@@ -473,9 +473,9 @@ fn (mut c Checker) check_expr(expr Expr) Type {
     ExprType {TypePrimitive{type: .type}}
     ExprLiteralPrimitive {expr.type} // no need to resolve because it's always known here
     ExprLiteralString {
-      TypePointer {
+      TypeArray {
         inner: TypePrimitive {
-          type: .u8
+          type: .i8
         }
       }
     }
@@ -715,7 +715,6 @@ fn (mut c Checker) check_expr(expr Expr) Type {
       if cast_types(what, c.resolve_type(expr.type)) == none {
         c.checker_error("cannot cast ${what} to ${expr.type}")
       }
-      c.result.resolved[expr.id] = c.resolve_type(expr.type)
       c.resolve_type(expr.type)
     }
     //else {c.checker_error("unimplemented check_expr() for ${expr}")}

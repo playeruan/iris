@@ -480,7 +480,11 @@ fn is_type_compatible(from Type, to Type) bool {
   if !is_qualifs_compatible(from.qualifs, to.qualifs) { return false }
   match from {
     TypePointer { return to.is_any() || (to is TypePointer && is_type_compatible(from.inner, to.inner)) }
-    TypeArray   { return to.is_any() || (to is TypeArray   && is_type_compatible(from.inner, to.inner)) }
+    TypeArray   { 
+      return to.is_any() 
+      || ((to is TypeArray && is_type_compatible(from.inner, to.inner)) || 
+          (to is TypePointer && is_type_compatible(from.inner, to.inner)))
+    }
     TypeFunc    {
       if to !is TypeFunc { return false }
       if !is_type_compatible(from.ret, to.ret) { return false }
@@ -568,6 +572,22 @@ fn join_unqual(a Type, b Type) ?Type {
     // TODO: handle other types in the future
   }
 
+  if ua is TypeArray && ub is TypePointer {
+    if are_types_equal(ua.inner, ub.inner) {
+      return ub
+    } else {
+      return none
+    }
+  }
+  
+  if ub is TypeArray && ua is TypePointer {
+    if are_types_equal(ua.inner, ub.inner) {
+      return ua
+    } else {
+      return none
+    }
+  }
+
   if ua is TypeArray && ub is TypeArray {
     j := join_unqual(ua.inner, ub.inner) or {return none}
     return TypeArray{inner: j}
@@ -611,6 +631,14 @@ fn cast_types(from Type, to Type) ?Type {
 
   if uf is TypePointer && ut is TypePointer {
     return ut
+  }
+  
+  if uf is TypeArray && ut is TypePointer {
+    if are_types_equal(uf.inner, ut.inner) {
+      return ut
+    } else {
+      return none
+    }
   }
 
   if uf is TypePrimitive && ut is TypePrimitive {
