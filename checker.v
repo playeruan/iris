@@ -277,7 +277,7 @@ fn (mut c Checker) enforce_constraints(name string, substitution map[string]Type
     if constr_name == "any" {continue}
     constr := c.table.constraints[constr_name]
     if !constr.contains(replacement) {
-      c.checker_error("cannot replace generic ${g_name} with type ${Type(replacement)} not in constraint ${constr_name}")
+      c.checker_error("cannot replace generic ${g_name} with type ${Type(replacement)} that is not in constraint ${constr_name}")
     }
   }
   return false

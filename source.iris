@@ -1,15 +1,9 @@
 include "bindings/libc.iris"
 
-struct Vec2 {
-  x: i32;
-  y: i32;
-}
+generic T: Numeric
+add: (x: T, y: T) -> T {ret x+y;}
 
 main: () -> i32 {
-  v: Vec2 = Vec2(0, 0);
-  vp: ^Vec2 = &v;
-  vpp: ^^Vec2 = &vp;
-  vpp^^.x = 2;
-  printf("%d\n", vp^.x);
+  x: bool = add(true, false);
   ret 0;
 }
