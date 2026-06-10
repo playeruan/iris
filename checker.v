@@ -343,6 +343,16 @@ fn (mut c Checker) resolve_sym_types(s Symbol) Symbol {
   }
 }
 
+fn (mut c Checker) check_assignment(from Type, to Type, name string) Type {
+  j := join_types(from, to) or {
+    c.checker_error("cannot implicitly cast ${from} to ${to} for ${name}")
+  }
+  if !is_type_compatible(from, to) {
+    c.checker_error("qualifier mismatch assigning ${from} to ${to} for ${name}")
+  }
+  return j
+}
+
 // checking expressions
 
 fn (mut c Checker) check_expr(expr Expr) Type {
@@ -472,9 +482,18 @@ fn (mut c Checker) check_expr(expr Expr) Type {
             } else {
               callee_typ.variadic_type or { c.checker_error("unreachable ${@LINE}") }
             }
-            j := join_types(t, req_t) or {
+            arg_name := if i < callee_typ.arg_names.len {
+              "argument " + callee_typ.arg_names[i]
+            } else {
+              "variadic argument ${i}"
+            }
+            j := c.check_assignment(t, req_t, arg_name)
+            /*j := join_types(t, req_t) or {
               c.checker_error("cannot implicitly cast between type ${t} and ${req_t} for argument ${i+1}")
             }
+            if j.qualifs != t.qualifs {
+              c.checker_error("cannot implicitly cast from type ${t} to ${req_t} for argument ${i+1}")
+            }*/
             if !are_types_equal(j, t) {
               c.result.implicit_casts[expr.argv[i].id] = j
             }
@@ -629,13 +648,15 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
 
       vt := c.check_expr(stmt.value)
 
-      j := join_types(decl_t, vt) or {
+      j := c.check_assignment(vt, decl_t, stmt.sym.name)
+
+      /*j := join_types(decl_t, vt) or {
         c.checker_error("cannot implicitly cast value of type ${vt} to ${decl_t} for variable ${stmt.sym.name}")
       }
 
       if decl_t is TypeStruct && vt is TypeStruct && !are_types_equal(decl_t, vt) {
         c.checker_error("cannot implicitly cast value of type ${Type(vt)} to ${Type(decl_t)} for variable ${stmt.sym.name} (use explicit type args e.g. 3@i32)")
-      }
+      }*/
       if !are_types_equal(vt, j) && !(decl_t is TypeStruct) && vt !is TypeArray {
         c.result.implicit_casts[stmt.value.id] = j
       }

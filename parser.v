@@ -92,7 +92,7 @@ fn (mut p Parser) parse_primary() Expr {
     .l_int    {
       ExprLiteralPrimitive{
         type: TypePrimitive {
-          qualifs: [.const]
+          qualifs: []
           type: BuiltinType.smallest_int(t.text.i64(), true)
         }
         value: LiteralValue{i64: t.text.i64()}
@@ -102,7 +102,7 @@ fn (mut p Parser) parse_primary() Expr {
     .l_float  {
       ExprLiteralPrimitive{
         type: TypePrimitive {
-          qualifs: [.const]
+          qualifs: []
           type: .f32
         }
         value: LiteralValue{f64: t.text.f64()}
@@ -112,7 +112,7 @@ fn (mut p Parser) parse_primary() Expr {
     .l_true, .l_false {
       ExprLiteralPrimitive{
         type: TypePrimitive {
-          qualifs: [.const]
+          qualifs: []
           type: .bool
         }
         value: LiteralValue{bool: t.kind == .l_true}
@@ -122,7 +122,7 @@ fn (mut p Parser) parse_primary() Expr {
     .l_string {
       ExprLiteralPrimitive{
         type: TypePrimitive {
-          qualifs: [.const]
+          qualifs: []
           type: .string
         }
         value: LiteralValue{string: t.text}

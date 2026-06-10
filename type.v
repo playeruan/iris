@@ -6,6 +6,17 @@ module main
 enum TypeQualifier as u8 {
   const
 }
+const all_type_qualifiers = [TypeQualifier.const]
+
+enum QualifierJoinRule as u8 {
+  union
+  intersect
+}
+
+enum QualifierCompatDirection as u8 {
+  value_subsumes_target
+  target_subsumes_value
+}
 
 fn (qs []TypeQualifier) str() string {
   mut s := ""
@@ -13,6 +24,17 @@ fn (qs []TypeQualifier) str() string {
     s += q.str() + " "
   }
 	return s
+}
+
+fn (q TypeQualifier) join_rule() QualifierJoinRule {
+  return match q {
+    .const {.intersect}
+  }
+}
+fn (q TypeQualifier) compat_direction() QualifierCompatDirection {
+  return match q {
+    .const {.value_subsumes_target}
+  }
 }
 
 // -- Type
@@ -146,7 +168,6 @@ struct TypeEnum {
 struct TypeGeneric {
   qualifs []TypeQualifier
   name string
-  // TODO: constaints []GenericConstraint
 }
 
 // for things that clearly should be 
@@ -248,17 +269,21 @@ fn (t Type) compact_str() string {
   return type_str
 }
 
-fn (t Type) unqual() Type {
+fn (t Type) with_qualifs(qs []TypeQualifier) Type {
   return match t {
-    TypePrimitive {TypePrimitive{qualifs: [], type: t.type}}
-    TypeFunc {TypeFunc {qualifs: [], arg_types: t.arg_types, arg_names: t.arg_names, ret: t.ret}}
-    TypePointer {TypePointer{qualifs: [], inner: t.inner}}
-    TypeArray {TypeArray{qualifs: [], inner: t.inner}}
-    TypeStruct {TypeStruct{qualifs: [], name: t.name, generic_args: t.generic_args, generic_base: t.generic_base}}
-    TypeEnum {TypeEnum{qualifs: [], name: t.name, as: t.as}}
-    TypeUnresolved{TypeUnresolved{qualifs: [], name: t.name}}
-    TypeGeneric {TypeGeneric{qualifs: [], name: t.name}}
+    TypePrimitive {TypePrimitive{qualifs: qs, type: t.type}}
+    TypeFunc {TypeFunc {qualifs: qs, arg_types: t.arg_types, arg_names: t.arg_names, ret: t.ret}}
+    TypePointer {TypePointer{qualifs: qs, inner: t.inner}}
+    TypeArray {TypeArray{qualifs: qs, inner: t.inner}}
+    TypeStruct {TypeStruct{qualifs: qs, name: t.name, generic_args: t.generic_args, generic_base: t.generic_base}}
+    TypeEnum {TypeEnum{qualifs: qs, name: t.name, as: t.as}}
+    TypeUnresolved{TypeUnresolved{qualifs: qs, name: t.name}}
+    TypeGeneric {TypeGeneric{qualifs: qs, name: t.name}}
   }
+}
+
+fn (t Type) unqual() Type {
+  return t.with_qualifs([])
 }
 
 fn (t TypePointer) pointer_depth() i32 {
@@ -408,6 +433,48 @@ fn (t Type) collapse_generic(gen_name string, type Type) Type {
   }
 }
 
+fn join_qualifs(a []TypeQualifier, b []TypeQualifier) []TypeQualifier {
+  mut result := []TypeQualifier{}
+  for q in all_type_qualifiers {
+    a_has := a.contains(q)
+    b_has := b.contains(q)
+    match q.join_rule() {
+      .union        { if a_has || b_has { result << q } }
+      .intersect    { if a_has && b_has { result << q } }
+    }
+  }
+  return result
+}
+
+fn is_qualifs_compatible(from []TypeQualifier, to []TypeQualifier) bool {
+  for q in all_type_qualifiers {
+    from_has := from.contains(q)
+    to_has   := to.contains(q)
+    match q.compat_direction() {
+      .value_subsumes_target  { if from_has && !to_has { return false } }
+      .target_subsumes_value  { if to_has && !from_has { return false } }
+    }
+  }
+  return true
+}
+
+fn is_type_compatible(from Type, to Type) bool {
+  if !is_qualifs_compatible(from.qualifs, to.qualifs) { return false }
+  match from {
+    TypePointer { return to is TypePointer && is_type_compatible(from.inner, to.inner) }
+    TypeArray   { return to is TypeArray   && is_type_compatible(from.inner, to.inner) }
+    TypeFunc    {
+      if to !is TypeFunc { return false }
+      if !is_type_compatible(from.ret, to.ret) { return false }
+      for i, fa in from.arg_types {
+        if !is_type_compatible(fa, to.arg_types[i]) { return false }
+      }
+      return true
+    }
+    else { return true }
+  }
+}
+
 fn are_types_equal(a Type, b Type) bool {
   ua := a.unqual()
   ub := b.unqual()
@@ -447,12 +514,13 @@ fn are_types_equal(a Type, b Type) bool {
   }
 }
 
-fn join_types(a Type, b Type) ?Type {
-  // TODO: cannot join non-const to const ?
+fn join_unqual(a Type, b Type) ?Type {
+
   if are_types_equal(a, b) { return a.unqual() }
 
   ua := a.unqual()
   ub := b.unqual()  
+
 
   if ua is TypePrimitive && ua.type == .any {return ub}
   if ub is TypePrimitive && ub.type == .any {return ua}
@@ -483,14 +551,14 @@ fn join_types(a Type, b Type) ?Type {
   }
 
   if ua is TypeArray && ub is TypeArray {
-    j := join_types(ua.inner, ub.inner) or {return none}
+    j := join_unqual(ua.inner, ub.inner) or {return none}
     return TypeArray{inner: j}
   }
 
   if ua is TypePointer && ub is TypePointer {
     if are_types_equal(ua.inner, TypePrimitive{type: .void}) { return ub }
     if are_types_equal(ub.inner, TypePrimitive{type: .void}) { return ua }
-    j := join_types(ua.inner, ub.inner) or { return none }
+    j := join_unqual(ua.inner, ub.inner) or { return none }
     return TypePointer{ qualifs: ua.qualifs, inner: j }
   }
 
@@ -502,7 +570,7 @@ fn join_types(a Type, b Type) ?Type {
     if ua.generic_args.len != ub.generic_args.len { return none }
     mut joined_args := []Type{}
     for i, ga in ua.generic_args {
-        joined_args << join_types(ga, ub.generic_args[i]) or { return none }
+        joined_args << join_unqual(ga, ub.generic_args[i]) or { return none }
     }
     mut subst := map[string]Type{}
     for i, ja in joined_args { subst["_${i}"] = ja }
@@ -510,6 +578,11 @@ fn join_types(a Type, b Type) ?Type {
 }
 
   return none
+}
+
+fn join_types(a Type, b Type) ?Type {
+  result := join_unqual(a.unqual(), b.unqual()) or { return none }
+  return result.with_qualifs(join_qualifs(a.qualifs, b.qualifs))
 }
 
 fn cast_types(from Type, to Type) ?Type {
