@@ -122,7 +122,7 @@ fn (mut l Lexer) lex_delimiter() Token {
 	lit := l.source[start..l.pos]
 	kind := Token.from_str(lit) or {l.lex_error("invalid string ${lit}")}
 
-  assert(kind != .invalid) //TODO: find better way of allowing "..."
+  assert(kind != .invalid)
 
 	return l.tok(kind, TokValue{void: none}, lit)
 }
