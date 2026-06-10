@@ -1,9 +1,9 @@
 include "bindings/libc.iris"
 
+foo: pure (X: const i32) -> i32 {
+  ret X;
+}
 
 main: () -> i32 {
-  X: const i32 = 0;
-  printf("%d\n", X@i32);
-  printf("%d\n", X);
   ret 0;
 }

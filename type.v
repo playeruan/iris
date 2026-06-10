@@ -5,8 +5,9 @@ module main
 
 enum TypeQualifier as u8 {
   const
+  pure
 }
-const all_type_qualifiers = [TypeQualifier.const]
+const all_type_qualifiers = [TypeQualifier.const, .pure]
 
 enum QualifierJoinRule as u8 {
   union
@@ -28,12 +29,13 @@ fn (qs []TypeQualifier) str() string {
 
 fn (q TypeQualifier) join_rule() QualifierJoinRule {
   return match q {
-    .const {.intersect}
+    .const, .pure {.union}
   }
 }
 fn (q TypeQualifier) compat_direction() QualifierCompatDirection {
   return match q {
     .const {.value_subsumes_target}
+    .pure  {.target_subsumes_value}
   }
 }
 

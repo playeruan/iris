@@ -1,9 +1,9 @@
 
-extern printf: (fmt: string, ...any)
-extern abs: (x: i32) -> i32
+extern printf: (FMT: const string, ...const any)
+extern abs: pure (X: const i32) -> i32
 
-extern malloc: (size: u32) -> ^void
-extern realloc: (ptr: ^void, new_size: u32) -> ^void
+extern malloc: (SIZE: const u32) -> ^void
+extern realloc: (ptr: ^void, NEW_SIZE: const u32) -> ^void
 extern free: (ptr: ^void)
 
-extern memmove: (dest: ^void, src: ^const void, count: u32) -> ^void
+extern memmove: (dest: ^void, SRC: ^const void, COUNT: const u32) -> ^void

@@ -90,6 +90,7 @@ enum TokKind as u8 {
 
   // type qualifs
   tq_const
+  tq_pure
 
   // decl qualifs
   dq_extern
@@ -149,6 +150,7 @@ fn (k TokKind) is_decl_qualifier() bool {
 fn (k TokKind) get_type_qualifier() TypeQualifier {
   return match k {
     .tq_const {.const}
+    .tq_pure  {.pure}
     else {panic("${k} is not a valid type qualifier")}
   }
 }
@@ -228,6 +230,7 @@ fn Token.from_str(s string) ?TokKind {
     "}"     {.rbrace}
 
     "const" {.tq_const}
+    "pure"  {.tq_pure}
 
     "extern" {.dq_extern}
     "nexter" {.dq_extern} // hi nexter

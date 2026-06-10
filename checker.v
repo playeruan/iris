@@ -684,18 +684,18 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
       for i := 0; i < stmt.sym.type.arg_types.len; i++ {
         n := stmt.sym.type.arg_names[i]
         t := c.resolve_type(stmt.sym.type.arg_types[i])
+        if t.qualifs.contains(.const) && !n.is_upper() {
+          c.checker_error("constant names must be upper case (${n} -> ${n.to_upper()})")
+        }
         c.register_sym(SymbolVar{name: n, type: t})
       }
 
       c.check_stmt_block(stmt.block)
 
-      mut returns := false 
-      for s in stmt.block.stmts {
-        returns = returns || c.does_stmt_always_return(s)
-      }
+      returns := c.does_stmt_always_return(stmt.block)
 
       if !stmt.sym.qualifs.contains(.extern) && func_t.ret != Type(TypePrimitive{type: .void}) && !returns {
-        c.checker_error("a non-void function must return a value in all paths")
+        c.checker_error("${func_t.ret} returning function ${stmt.sym.name} is expected to return a value in all paths")
       }
 
       c.pop_scope()
