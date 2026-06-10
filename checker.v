@@ -144,6 +144,110 @@ fn (mut c Checker) does_stmt_always_return(s Stmt) bool {
   }
 }
 
+fn (mut c Checker) expr_only_contains_pure_functions(e Expr) (bool, string) {
+  return match e {
+    ExprCall {
+      sym := c.current_scope.lookup_sym(e.callee.name) or {c.checker_error("undeclared function ${e.callee.name}")}
+      for arg in e.argv {
+        only, name := c.expr_only_contains_pure_functions(arg)
+        if !only {return false, name}
+      }
+      if !sym.type.qualifs.contains(.pure) {
+        return false, e.callee.name
+      }
+      return true, ""
+    }
+    ExprLiteralArray, ExprLiteralStruct {
+      for arg in e.argv {
+        only, name := c.expr_only_contains_pure_functions(arg)
+        if !only {return false, name}
+      }
+      true, ""
+    }
+    ExprBinary {
+      mut only, mut name := c.expr_only_contains_pure_functions(e.left)
+      if !only {return false, name} 
+      only, name = c.expr_only_contains_pure_functions(e.right)
+      if !only {return false, name} 
+      true, ""
+    }
+    ExprUnary {
+      c.expr_only_contains_pure_functions(e.operand) 
+    }
+    ExprRef, ExprDeref, ExprGroup {
+      c.expr_only_contains_pure_functions(e.inner) 
+    }
+    ExprSizeof {
+      c.expr_only_contains_pure_functions(e.expr) 
+    }
+    ExprAccess {
+      c.expr_only_contains_pure_functions(e.accessee) 
+    }
+    ExprIndex {
+      c.expr_only_contains_pure_functions(e.indexee) 
+    }
+    ExprCast {
+      c.expr_only_contains_pure_functions(e.castee) 
+    }
+    else {true, ""}
+  }
+}
+
+fn (mut c Checker) stmt_only_calls_pure_functions(s Stmt) (bool, string) {
+  return match s {
+    StmtReturn, StmtExpr {c.expr_only_contains_pure_functions(s.expr)}
+    StmtBlock {
+      for s_ in s.stmts {
+        only, name := c.stmt_only_calls_pure_functions(s_)
+        if !only {return false, name}
+      }
+      true, ""
+    }
+    StmtDeclFunc {
+      c.stmt_only_calls_pure_functions(s.block)
+    }
+    StmtDeclVar{
+      c.expr_only_contains_pure_functions(s.value)
+    }
+    StmtAssign {
+      c.expr_only_contains_pure_functions(s.val)
+    }
+    StmtWhile {
+      mut only, mut name := c.expr_only_contains_pure_functions(s.guard)
+      if !only {return false, name}
+      only, name = c.stmt_only_calls_pure_functions(s.block)
+      if !only {return false, name}
+      true, ""
+    }
+    StmtFor {
+      c.checker_error("unimplemented ${@LINE}")
+    }
+    StmtBranch {
+      mut only, mut name := c.expr_only_contains_pure_functions(s.if_guard)
+      if !only {return false, name}
+      only, name = c.stmt_only_calls_pure_functions(s.if_block)
+      if !only {return false, name}
+
+      if s.elif_guards != none {
+        for elif_g in s.elif_guards {
+          only, name = c.expr_only_contains_pure_functions(elif_g)
+          if !only {return false, name}
+        }
+        for elif_b in s.elif_blocks {
+          only, name = c.stmt_only_calls_pure_functions(elif_b)
+          if !only {return false, name}
+        }
+      }
+      if s.else_block != none {
+        only, name = c.stmt_only_calls_pure_functions(s.else_block)
+        if !only {return false, name}
+      }
+      true, ""
+    }
+    else {true, ""}
+  }
+}
+
 fn (mut c Checker) register_sym(s Symbol) {
   if s.name in c.current_scope.syms {
     c.checker_error("redefinition of symbol ${s.name}")
@@ -344,6 +448,12 @@ fn (mut c Checker) resolve_sym_types(s Symbol) Symbol {
 }
 
 fn (mut c Checker) check_assignment(from Type, to Type, name string) Type {
+  for q in from.qualifs {
+    if !q.valid_for_type(from) {c.checker_error("qualifier ${q} not valid for type ${from.unqual()}")}
+  }
+  for q in to.qualifs {
+    if !q.valid_for_type(from) {c.checker_error("qualifier ${q} not valid for type ${to.unqual()}")}
+  }
   j := join_types(from, to) or {
     c.checker_error("cannot implicitly cast ${from} to ${to} for ${name}")
   }
@@ -488,12 +598,7 @@ fn (mut c Checker) check_expr(expr Expr) Type {
               "variadic argument ${i}"
             }
             j := c.check_assignment(t, req_t, arg_name)
-            /*j := join_types(t, req_t) or {
-              c.checker_error("cannot implicitly cast between type ${t} and ${req_t} for argument ${i+1}")
-            }
-            if j.qualifs != t.qualifs {
-              c.checker_error("cannot implicitly cast from type ${t} to ${req_t} for argument ${i+1}")
-            }*/
+            
             if !are_types_equal(j, t) {
               c.result.implicit_casts[expr.argv[i].id] = j
             }
@@ -650,13 +755,6 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
 
       j := c.check_assignment(vt, decl_t, stmt.sym.name)
 
-      /*j := join_types(decl_t, vt) or {
-        c.checker_error("cannot implicitly cast value of type ${vt} to ${decl_t} for variable ${stmt.sym.name}")
-      }
-
-      if decl_t is TypeStruct && vt is TypeStruct && !are_types_equal(decl_t, vt) {
-        c.checker_error("cannot implicitly cast value of type ${Type(vt)} to ${Type(decl_t)} for variable ${stmt.sym.name} (use explicit type args e.g. 3@i32)")
-      }*/
       if !are_types_equal(vt, j) && !(decl_t is TypeStruct) && vt !is TypeArray {
         c.result.implicit_casts[stmt.value.id] = j
       }
@@ -668,12 +766,25 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
       if !stmt.sym.name.is_lower() {
         c.checker_error("function names must be snake case (${stmt.sym.name} -> ${stmt.sym.name.camel_to_snake()})")
       }
+
+      only_pure, unpure_name := c.stmt_only_calls_pure_functions(stmt)
+      if stmt.sym.type.qualifs.contains(.pure) && !only_pure {
+        c.checker_error("function ${stmt.sym.name} is declared as pure but calls unpure function ${unpure_name}")
+      }
       
       c.register_sym(c.resolve_sym_types(stmt.sym))
 
       c.push_scope(&stmt)
 
       func_t := stmt.sym.type as TypeFunc
+      
+      for q in func_t.qualifs {
+        if !q.valid_for_type(func_t) {c.checker_error("qualifier ${q} not valid for type ${Type(func_t).unqual()}")}
+      }
+
+      for q in func_t.ret.qualifs {
+        if !q.valid_for_type(func_t.ret) {c.checker_error("qualifier ${q} not valid for type ${func_t.ret.unqual()}")}
+      }
 
       if func_t.variadic_type != none && !stmt.sym.qualifs.contains(.extern) {
         c.checker_error("variadic args are only allowed in extern qualified functions right now")
@@ -747,7 +858,6 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
       }
 
       if c.current_scope.parent != none && stmt.sym.name !in c.table.structs {
-        dump(c.current_scope)
         c.checker_error("structs can only be declared in the global scope")
       }
       

@@ -39,6 +39,15 @@ fn (q TypeQualifier) compat_direction() QualifierCompatDirection {
   }
 }
 
+fn (q TypeQualifier) valid_for_type(t Type) bool {
+  valid := match t {
+    TypePrimitive, TypePointer, TypeArray, TypeStruct, TypeEnum {[TypeQualifier.const]}
+    TypeFunc {[.pure]}
+    else {[]}
+  }
+  return valid.contains(q)
+}
+
 // -- Type
 
 enum BuiltinType as u8 {
