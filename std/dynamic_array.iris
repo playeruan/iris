@@ -30,59 +30,59 @@ da_create: (init_vals: []T, init_size: i32) -> DynamicArray<T> {
 
 generic T 
 da_grow: (da: ^DynamicArray<T>) {
-  da..capacity *= 2;
-  da..array = realloc(da..array, sizeof(T)*da..capacity);
+  da^.capacity *= 2;
+  da^.array = realloc(da^.array, sizeof(T)*da^.capacity);
 }
 
 generic T
 da_append: (da: ^DynamicArray<T>, val: T) {
   if da == nullptr {ret;}
-  if da..size == 0 && da..capacity == 0 {
+  if da^.size == 0 && da^.capacity == 0 {
     // freed but reused, just re-create it
     ^da = da_create([val], 1);
     ret;
   }
-  if da..size+1 >= da..capacity {
+  if da^.size+1 >= da^.capacity {
     da_grow(da);
   }
-  da..array[da..size] = val;
-  ++da..size;
+  da^.array[da^.size] = val;
+  ++da^.size;
 }
 
 generic T
 da_prepend: (da: ^DynamicArray<T>, val: T) {
   if da == nullptr {ret;}
-  if da..size == 0 && da..capacity == 0 {
+  if da^.size == 0 && da^.capacity == 0 {
     // freed but reused, just re-create it
     ^da = da_create([val], 1);
     ret;
   }
-  if da..size+1 >= da..capacity {
+  if da^.size+1 >= da^.capacity {
     da_grow(da);
   }
-  memmove(da..array+1, da..array, (da..capacity-1)*sizeof(T));
-  da..array[0] = val;
+  memmove(da^.array+1, da^.array, (da^.capacity-1)*sizeof(T));
+  da^.array[0] = val;
 }
 
 generic T 
 da_insert: (da: ^DynamicArray<T>, idx: i32, val: T) {
-  while idx > da..capacity {
+  while idx > da^.capacity {
     da_grow(da);
   }
-  da..array[idx] = val;
-  if da..size < idx {
-    da..size = idx;
+  da^.array[idx] = val;
+  if da^.size < idx {
+    da^.size = idx;
   }
 }
 
 generic T
 da_free: (da: ^DynamicArray<T>) {
-  if da == nullptr || da..array == nullptr {
+  if da == nullptr || da^.array == nullptr {
     ret;
   }
-  da..capacity = 0;
-  da..size = 0;
-  free(da..array);
+  da^.capacity = 0;
+  da^.size = 0;
+  free(da^.array);
 }
 
 generic T

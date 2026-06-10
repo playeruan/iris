@@ -49,6 +49,13 @@ fn (p Parser) peek_next() Token {
   return p.toks[p.pos + 1]
 }
 
+fn (p Parser) peek_ahead(distance u32) Token {
+  if p.pos+distance >= p.toks.len {
+    p.parse_error("tried to peek_ahead(${distance}) at EOF")
+  }
+  return p.toks[p.pos + distance]
+}
+
 fn (mut p Parser) advance() Token {
   t := p.peek()
   p.span = t.span
@@ -160,6 +167,40 @@ fn (mut p Parser) parse_primary() Expr {
           id: p.next_id()
         }
       } else {
+        if p.peek().kind == .o_caret {
+          mut ahead := u32(1)
+          for p.peek_ahead(ahead).kind == .o_caret {
+            ahead++;
+          }
+          if p.peek_ahead(ahead).kind == .dot {
+            mut tmp := ExprDeref {
+              inner: ExprVar {
+                name: t.text
+                id: p.next_id()
+              }
+              id: p.next_id()
+            }
+            for _ in 1..ahead {
+              tmp = ExprDeref {
+                inner: tmp
+                id: p.next_id()
+              }
+              p.advance()
+            }
+            p.advance()
+            p.advance()
+            return ExprAccess {
+              accessee: tmp
+              member: ExprVar {
+                name: p.expect(.identifier).text
+                id: p.next_id()
+              }
+              id: p.next_id()
+            }
+          } else {
+            p.parse_error("expected token of kind dot, got ${p.peek_ahead(ahead).kind}")
+          }
+        }
         ExprVar{
           name: t.text
           id: p.next_id()
@@ -195,7 +236,7 @@ fn (mut p Parser) parse_primary() Expr {
         id: p.next_id()
       }
     }
-    .o_caret {
+    .o_caret { 
       ExprDeref{
         inner: p.parse_expr(.prefix)
         id: p.next_id()
@@ -283,18 +324,7 @@ fn (mut p Parser) parse_expr(pr Precedence) Expr {
         }
       }
       .dotdot {
-        ident := p.expect(.identifier) 
-        ExprAccess {
-          accessee: ExprDeref {
-            inner: expr
-            id: p.next_id()
-          }
-          member: ExprVar {
-            name: ident.text
-            id: p.next_id()
-          }
-          id: p.next_id()
-        }
+        p.parse_error(".. syntax to access struct pointers is deprecated, use ^. instead") 
       }
       .at {
         t := p.parse_type()

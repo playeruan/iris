@@ -12,11 +12,11 @@ arena: (cap: u32) -> Arena {
 }
 
 aalloc: (a: ^Arena, s: u32) -> ^void {
-  if a..offset + s > a..capacity {
+  if a^.offset + s > a^.capacity {
     ret nullptr;
   }
-  mem: ^void = a..storage + a..offset;
-  a..offset += s;
+  mem: ^void = a^.storage + a^.offset;
+  a^.offset += s;
   ret mem;
 }
 

@@ -13,8 +13,8 @@ ll_create: (first_elem_val: T) -> ^LinkedListNode<T> {
     if new_ll == nullptr {
         ret nullptr;
     }
-    new_ll..val = first_elem_val;
-    new_ll..next = nullptr;
+    new_ll^.val = first_elem_val;
+    new_ll^.next = nullptr;
     ret new_ll;
 }
 
@@ -30,7 +30,7 @@ ll_prepend: (ll: ^^LinkedListNode<T>, val: T) {
 
     first_el: ^LinkedListNode<T> = ^ll;
     ^ll = new_node;
-    new_node..next = first_el;
+    new_node^.next = first_el;
 }
 
 // inserts a new nodes with value val at the end of the given list (note: will travel the whole list). a new list is created if ll == nullptr
@@ -44,19 +44,19 @@ ll_append: (ll: ^^LinkedListNode<T>, val: T) {
     }
 
     curr: ^LinkedListNode<T> = ^ll;
-    while curr..next != nullptr {
-        curr = curr..next;
+    while curr^.next != nullptr {
+        curr = curr^.next;
     }
 
-    curr..next = new_node;
+    curr^.next = new_node;
 }
 
 // frees all nodes belonging to the given list and sets ll to nullptr
 generic T
 ll_delete: (ll: ^^LinkedListNode<T>) {
     if ll == nullptr || ^ll == nullptr { ret; }
-    if (^^ll).next != nullptr {
-        ll_delete((&((^^ll).next)));
+    if ll^^.next != nullptr {
+        ll_delete((&(ll^^.next)));
     }
     free(^ll);
     ^ll = nullptr;
@@ -66,8 +66,8 @@ ll_delete: (ll: ^^LinkedListNode<T>) {
 generic T
 ll_print: (ll: ^LinkedListNode<T>) {
     while ll != nullptr {
-        printf("[%d]->", ll..val); // TODO: generic formatting :sob:
-        ll = ll..next;
+        printf("[%d]->", ll^.val); // TODO: generic formatting :sob:
+        ll = ll^.next;
     }
     printf("[nullptr]\n");
 }
@@ -78,7 +78,7 @@ ll_get_size: (ll: ^LinkedListNode<T>) -> i32 {
     size: i32 = 0;
     while ll != nullptr {
         size += 1;
-        ll = ll..next;
+        ll = ll^.next;
     }
     ret size;
 }
@@ -88,11 +88,11 @@ ll_find: (ll: ^LinkedListNode<T>, val_to_find: T) -> i32 {
     index: i32 = 0;
         
     while ll != nullptr {
-        if ll..val == val_to_find {
+        if ll^.val == val_to_find {
             ret index;
         }
         index += 1;
-        ll = ll..next;
+        ll = ll^.next;
     }
 
     ret -1;

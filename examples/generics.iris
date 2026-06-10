@@ -44,7 +44,7 @@ unbox: (b: Box<T>) -> T {
 
 generic T
 unbox_ptr: (b: ^Box<T>) -> T {
-    ret b..val;
+    ret b^.val;
 }
 
 generic T
@@ -61,8 +61,8 @@ first_of_two: (a: T, b: T) -> T {
 generic T
 stack_push: (top: ^^Stack<T>, val: T) {
     node: ^Stack<T> = malloc(sizeof(Stack<T>));
-    node..val  = val;
-    node..next = ^top;
+    node^.val  = val;
+    node^.next = ^top;
     ^top = node;
 }
 

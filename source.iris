@@ -1,12 +1,15 @@
 include "bindings/libc.iris"
 
-generic T
 struct Vec2 {
-  x: T;
-  y: T;
+  x: i32;
+  y: i32;
 }
 
 main: () -> i32 {
-  V: const Vec2<i32> = Vec2<i32>(1, 2);
+  v: Vec2 = Vec2(0, 0);
+  vp: ^Vec2 = &v;
+  vpp: ^^Vec2 = &vp;
+  vpp^^.x = 2;
+  printf("%d\n", vp^.x);
   ret 0;
 }
