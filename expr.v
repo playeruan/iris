@@ -7,7 +7,6 @@ union LiteralValue {
   i64 i64 
   f64 f64
   bool bool
-  string string
 }
 
 type Expr = 
@@ -16,7 +15,7 @@ type Expr =
   ExprType | ExprCast | ExprLiteralStruct | 
   ExprLiteralArray | ExprRef | ExprDeref |
   ExprBinary | ExprUnary | ExprSizeof |
-  ExprLiteralNullptr
+  ExprLiteralNullptr | ExprLiteralString
 
 struct ExprVar {
   name string
@@ -26,6 +25,11 @@ struct ExprVar {
 struct ExprLiteralPrimitive {
   type TypePrimitive 
   value LiteralValue 
+  id i32
+}
+
+struct ExprLiteralString {
+  value string 
   id i32
 }
 

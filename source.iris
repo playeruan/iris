@@ -1,9 +1,9 @@
 include "bindings/libc.iris"
 
-generic T: Numeric
-add: (x: T, y: T) -> T {ret x+y;}
-
 main: () -> i32 {
-  x: bool = add(true, false);
+  s: ^u8 = "World!";
+  printf("Hello, %s\n", s);
   ret 0;
 }
+
+

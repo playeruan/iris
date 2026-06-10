@@ -61,16 +61,19 @@ enum BuiltinType as u8 {
   f32
   f64
   bool
-  string
   type
   any
+}
+
+const any_type := TypePrimitive {
+  type: .any
 }
 
 fn is_builtin_type(s string) bool {
   return [
     "void", "i8", "i16", "i32",
     "u8", "u16", "u32", "f32", 
-    "f64", "bool", "string", "type",
+    "f64", "bool", "type",
     "any"
   ].contains(s)
 }
@@ -88,7 +91,6 @@ fn BuiltinType.from_tok_kind(t TokKind) BuiltinType {
     .t_bool   {.bool}
     .t_void   {.void}
     .t_type   {.type}
-    .t_string {.string}
     .t_any    {.any}
     else      {
       panic("invalid TokKind ${t} to convert to BuiltinType")
@@ -98,7 +100,7 @@ fn BuiltinType.from_tok_kind(t TokKind) BuiltinType {
 
 fn (t BuiltinType) size() i32 {
   return match t {
-    .void, .string, .type, .any {0} // TODO: .string, .type, .any sizes
+    .void, .type, .any {0} // TODO: .string, .type, .any sizes
     .i8, .u8, .bool {1}
     .i16, .u16 {2}
     .i32, .u32 {4}
@@ -469,11 +471,16 @@ fn is_qualifs_compatible(from []TypeQualifier, to []TypeQualifier) bool {
   return true
 }
 
+fn (t Type) is_any() bool {
+  return t is TypePrimitive && are_types_equal(t, any_type) 
+}
+
 fn is_type_compatible(from Type, to Type) bool {
+  
   if !is_qualifs_compatible(from.qualifs, to.qualifs) { return false }
   match from {
-    TypePointer { return to is TypePointer && is_type_compatible(from.inner, to.inner) }
-    TypeArray   { return to is TypeArray   && is_type_compatible(from.inner, to.inner) }
+    TypePointer { return to.is_any() || (to is TypePointer && is_type_compatible(from.inner, to.inner)) }
+    TypeArray   { return to.is_any() || (to is TypeArray   && is_type_compatible(from.inner, to.inner)) }
     TypeFunc    {
       if to !is TypeFunc { return false }
       if !is_type_compatible(from.ret, to.ret) { return false }
@@ -536,7 +543,7 @@ fn join_unqual(a Type, b Type) ?Type {
   if ua is TypePrimitive && ua.type == .any {return ub}
   if ub is TypePrimitive && ub.type == .any {return ua}
 
-  non_joinable := [BuiltinType.string, .void, .bool]
+  non_joinable := [BuiltinType.void, .bool]
   if ua is TypePrimitive && ub is TypePrimitive {
 
     if non_joinable.contains(ua.type) || non_joinable.contains(ub.type) {

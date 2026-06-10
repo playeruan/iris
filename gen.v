@@ -57,7 +57,6 @@ fn (mut g Generator) gen_type_left(t Type, is_ret bool) string {
         .f32 {"float"}
         .f64 {"double"}
         .bool {"bool"}
-        .string {"char*"}
         .void {"void"}
         else {g.gen_error("unimplemented type ${t.type}")}
       }
@@ -117,12 +116,14 @@ fn (mut g Generator) gen_expr(e Expr) string {
           .i8, .u8, .i16, .u16, .i32, .u32 {e.value.i64.str()}
           .f32, .f64 {e.value.f64.str()}
           .bool {e.value.bool.str()}
-          .string {"\"${e.value.string}\""}
           .type {g.gen_error("unimplemented type type")}
           .void {""}
           .any {g.gen_error("unimplemented type any")}
         }
         s
+      }
+      ExprLiteralString {
+        "\"${e.value}\""
       }
       ExprLiteralStruct {
         t := if e.id in g.checked_ast.resolved {

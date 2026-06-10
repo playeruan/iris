@@ -101,6 +101,7 @@ fn (mut c Checker) clone_expr(e Expr) Expr {
     ExprLiteralNullptr { ExprLiteralNullptr{      id: c.next_id()} }
     ExprLiteralStruct  { ExprLiteralStruct{...e,  id: c.next_id(), argv: e.argv.map(c.clone_expr(it))} }
     ExprLiteralArray   { ExprLiteralArray{...e,   id: c.next_id(), argv: e.argv.map(c.clone_expr(it))} }
+    ExprLiteralString  { ExprLiteralString{...e,   id: c.next_id() } }
     ExprGroup          { ExprGroup{...e,           id: c.next_id(), inner: c.clone_expr(e.inner)} }
     ExprCall           { ExprCall{...e,            id: c.next_id(), callee: c.clone_expr(e.callee), argv: e.argv.map(c.clone_expr(it))} }
     ExprIndex          { ExprIndex{...e,           id: c.next_id(), indexee: c.clone_expr(e.indexee), idx: c.clone_expr(e.idx)} }
@@ -111,7 +112,7 @@ fn (mut c Checker) clone_expr(e Expr) Expr {
     ExprBinary         { ExprBinary{...e,          id: c.next_id(), left: c.clone_expr(e.left), right: c.clone_expr(e.right)} }
     ExprCast           { ExprCast{...e,            id: c.next_id(), castee: c.clone_expr(e.castee)} }
     ExprType           { ExprType{...e,            id: c.next_id()} }
-    ExprSizeof { ExprSizeof{...e, id: c.next_id(), expr: c.clone_expr(e.expr)} }
+    ExprSizeof         { ExprSizeof{...e, id: c.next_id(), expr: c.clone_expr(e.expr)} }
   }
 }
 
@@ -471,6 +472,13 @@ fn (mut c Checker) check_expr(expr Expr) Type {
     ExprLiteralNullptr {TypePointer{inner: TypePrimitive{type: .void}}}
     ExprType {TypePrimitive{type: .type}}
     ExprLiteralPrimitive {expr.type} // no need to resolve because it's always known here
+    ExprLiteralString {
+      TypePointer {
+        inner: TypePrimitive {
+          type: .u8
+        }
+      }
+    }
     ExprLiteralArray {
       mut elem_t := Type(TypePrimitive{type: .void})
       for argv in expr.argv {
