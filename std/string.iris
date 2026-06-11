@@ -18,6 +18,10 @@ str_to_i8: pure (str: String) -> ^i8 {
     ret str.chars.array;
 }
 
+str_clone: (src: String) -> String {
+  ret str_create(str_to_i8(src));
+}
+
 str_len: pure (str: String) -> u32 {
     ret str.chars.size;
 }
@@ -29,5 +33,9 @@ str_concat: (str1: String, str2: String) -> String {
     concat: String = str_create(tmp);
     free(tmp);
     ret concat;
+}
+
+str_concat_i8: (str1: String, str2: ^i8) -> String {
+  ret str_concat(str1, str_create(str2));
 }
 
