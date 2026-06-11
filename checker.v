@@ -712,6 +712,7 @@ fn (mut c Checker) check_expr(expr Expr) Type {
       } else {
         c.checker_error("cannot index from non-array type ${lt}")
       }
+      c.check_expr(expr.idx)
     }
     ExprRef {
       it := c.resolve_type(c.check_expr(expr.inner))

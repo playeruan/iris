@@ -1,0 +1,48 @@
+include "../bindings/libc.iris"
+
+// Array<T> is meant to be a safer, more robust Array
+// intended to be used when safety is more important
+// than efficiency.
+generic T
+struct Array {
+  data: ^T;
+  size: const u32; // TODO: const member names uppercase
+}
+
+// creates an Array<T> of size SIZE and returns it.
+// mismatched SIZE with RAW_DATA's size is undefined behaviour.
+generic T
+arr_create: pure (SIZE: const u32, RAW_DATA: const ^T) -> Array<T> {
+  arr: Array<T> = Array<T>(RAW_DATA, SIZE);
+  ret arr;
+}
+
+generic T
+arr_size: pure (ARR: const Array<T>) -> u32 {
+  ret ARR.size;
+}
+
+generic T
+arr_at: (ARR: const Array<T>, IDX: const u32) -> T {
+  SIZE: const u32 = arr_size(ARR);
+  if IDX >= SIZE {
+    printf("tried to arr_at at index [%d] for Array of size %d (max is %d)\n", IDX, SIZE, SIZE-1);
+    exit(1);
+  }
+  ret ARR.data[IDX];
+}
+
+generic T
+arr_ptr_at: (ARR: const Array<T>, IDX: const u32) -> ^T {
+  SIZE: const u32 = arr_size(ARR);
+  if IDX >= SIZE {
+    printf("tried to arr_ptr_at at index [%d] for Array of size %d (max is %d)\n", IDX, SIZE, SIZE-1);
+    exit(1);
+  }
+  ret &ARR.data[IDX];
+}
+
+generic T
+arr_insert: (arr: Array<T>, IDX: const u32, VAL: const T) {
+  ^arr_ptr_at(arr, IDX) = VAL;
+}

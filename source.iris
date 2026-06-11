@@ -1,9 +1,12 @@
-include "std/string.iris"
+include "std/array.iris"
 
 main: () -> i32 {
-  s: String = str_create("Hello, World!");
-  s2: String = str_clone(s);
-  s2 = str_concat_i8(s2, "2");
-  printf("%s\n%s\n", str_to_i8(s), str_to_i8(s2));
+  xs: Array<u8> = arr_create<u8>(3, [2, 4, 1]);
+  arr_insert(xs, 1, 9);
+  i: i32 = 0;
+  while i < arr_size(xs) {
+    printf("%d\n", arr_at(xs, i));
+    ++i;
+  }
   ret 0;
 }

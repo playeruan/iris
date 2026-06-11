@@ -11,3 +11,5 @@ extern memmove: (dest: ^void, SRC: ^const void, COUNT: const u32) -> ^void
 extern strlen: (STR: const ^i8) -> u32
 extern strcat: (dst: ^i8, SRC: const ^i8) -> ^i8
 extern strcpy: (dst: ^i8, SRC: const ^i8) -> ^i8
+
+extern exit: (STATUS: const i32)
