@@ -2,12 +2,26 @@ include "../bindings/libc.iris"
 
 enum Error {
   OK,
-  ASSERT = 2,
+  FAIL_GENERIC = 1,
+  ASSERT_FAILED = 2,
 }
+
+// TODO: allow casts to Enums
 
 assert_msg: (CONDITION: const bool, MSG: const ^i8) {
   if !CONDITION {
     printf("ASSERT FAILED: %s\n", MSG);
-    exit(Error.ASSERT@i32);
+    exit(Error.ASSERT_FAILED@i32);
   }
+}
+
+error_string: pure (ERR: const Error) -> ^i8 {
+  if ERR == Error.OK {
+    ret "Ok";
+  } elif ERR == Error.FAIL_GENERIC {
+    ret "Failure";
+  } elif ERR == Error.ASSERT_FAILED {
+    ret "Assert failed";
+  }
+  ret "<unknown error>";
 }
