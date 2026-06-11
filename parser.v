@@ -705,13 +705,14 @@ fn (mut p Parser) parse_stmt() Stmt {
     }
     .include {
       p.advance()
-      path := os.abs_path(os.join_path_single(os.dir(p.span.file), p.expect(.l_string).text))
+      mut path := os.abs_path(os.join_path_single(os.dir(p.span.file), p.expect(.l_string).text))
 
       if path == p.span.file {
         p.parse_error("recursive include statements are not allowed") 
       }
 
-      if path in p.parsed_files {
+
+      if p.parsed_files.contains(path) {
         return StmtInclude{
           path: path
           span: p.span
@@ -719,9 +720,12 @@ fn (mut p Parser) parse_stmt() Stmt {
         }  
       }
 
+
       if !os.exists(path) {
         p.parse_error("imported file ${path} does not exist")
       }
+
+      path = path.replace("\\", "\\\\") // fix for the worst operating system known to mankind
 
       new_toks := Lexer.lex_file(path)
       p.parsed_files << path
