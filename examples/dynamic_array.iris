@@ -1,13 +1,10 @@
 include "../std/dynamic_array.iris"
 
 main: () -> i32 {
-  da_int: DynamicArray<i32> = da_create<i32>(5@i32);
-  da_fill(&da_int, 3@i32);
-  da_append(&da_int, 4@i32);
-  da_prepend(&da_int, 2@i32);
-  // casts needed because of current
-  // compiler limitation in joining types
-  // in generic function calls
+  da_int: DynamicArray<i32> = da_create<i32>(5);
+  da_fill(&da_int, 3);
+  da_append(&da_int, 4);
+  da_prepend(&da_int, 2);
   printf("da_int.size = %d\n", da_int.size);
   if da_int.size != 7 {
     printf("WRONG ARRAY SIZE != 7\n");
