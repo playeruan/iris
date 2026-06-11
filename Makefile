@@ -22,7 +22,7 @@ test: $(TESTDIR)/*.iris
 	for file in $^; do \
 		echo "----- compiling $${file} -----"; \
 		echo; \
-		v run . "./$${file}" && ./out; \
+		${VCOMMAND} run . "./$${file}" && ./out; \
 		echo; \
 	done
 	rm out.c out

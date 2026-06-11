@@ -16,21 +16,18 @@ fn main() {
 
   os.write_file("out.c", generated.text) or {panic("unable to write out.c")}
 
-  mut compiler := "clang"
-  mut result := os.execute(compiler)
-  if result.exit_code == 127 {
-    compiler = "gcc" 
-    result = os.execute(compiler)
-    if result.exit_code == 127 {
-      eprintln("could not find C compiler")
-      exit(1)
+  mut compilers := ["clang", "gcc"]
+  for compiler in compilers {
+    if os.exists_in_system_path(compiler) {
+      mut command := "${compiler} -g out.c "
+      for lib in generated.to_link {
+        command += "-l${lib} "
+      }
+      command += "-o out"
+      os.execute_or_exit(command)
+      exit(0)
     }
   }
-
-  mut command := "${compiler} -g out.c "
-  for lib in generated.to_link {
-    command += "-l${lib} "
-  }
-  command += "-o out"
-  os.execute_or_exit(command)
+  eprintln("could not find C compiler")
+  exit(1)
 }
