@@ -11,7 +11,7 @@ main: () -> i32 {
     printf("WRONG STRING SIZE WHEN SUMMING\n"); 
     ret 1;
   }
-  printf("\"%s\" + \"%s\" = \"%s\"\n",str_to_i8(s1), str_to_i8(s2), str_to_i8(s3));
+  printf("\"%s\" + \"%s\" = \"%s\"\n", str_to_i8(s1), str_to_i8(s2), str_to_i8(s3));
   ret 0;
 }
 

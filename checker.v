@@ -770,6 +770,10 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
           c.checker_error("type any can only be used for variadic function arguments")
         }
       }
+      
+      for q in stmt.sym.qualifs {
+        if !q.valid_for_decl(stmt) {c.checker_error("qualifier ${q} not valid for variable")}
+      }
 
       if decl_t is TypeFunc {
         c.checker_error("function type variables are not yet implemented")
@@ -804,6 +808,10 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
       
       for q in func_t.qualifs {
         if !q.valid_for_type(func_t) {c.checker_error("qualifier ${q} not valid for type ${Type(func_t).unqual()}")}
+      }
+      
+      for q in stmt.sym.qualifs {
+        if !q.valid_for_decl(stmt) {c.checker_error("qualifier ${q} not valid for function")}
       }
 
       for q in func_t.ret.qualifs {
@@ -883,6 +891,10 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
 
       if c.current_scope.parent != none && stmt.sym.name !in c.table.structs {
         c.checker_error("structs can only be declared in the global scope")
+      }
+
+      for q in stmt.sym.qualifs {
+        if !q.valid_for_decl(stmt) {c.checker_error("qualifier ${q} not valid for struct")}
       }
       
       c.table.structs[stmt.sym.name] = stmt.sym as SymbolStruct

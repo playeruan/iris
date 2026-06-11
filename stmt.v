@@ -16,6 +16,14 @@ fn (qs []DeclQualifier) str() string {
 	return s
 }
 
+fn (q DeclQualifier) valid_for_decl(s Stmt) bool {
+  valid := match s {
+    StmtDeclFunc, StmtDeclStruct {[DeclQualifier.extern]}
+    else {[]}
+  }
+  return valid.contains(q)
+}
+
 // -- Stmt
 
 type Stmt = 

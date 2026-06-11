@@ -76,7 +76,7 @@ generic T
 da_insert_array: (da: ^DynamicArray<T>, IDX: const i32, vals: ^T, vals_size: i32) {
   i: i32 = 0;
   while i < vals_size {
-    da_insert(da, IDX + i, vals[i]);
+    da_insert<T>(da, IDX + i, vals[i]);
     ++i;
   }
 }
