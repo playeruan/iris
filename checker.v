@@ -1043,6 +1043,7 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
 
     StmtInclude {}
     StmtDirectiveLink {}
+    StmtDirectiveCInclude {} // TODO: check header exists
 
     else {c.checker_error("unimplemented check_stmt() for ${stmt}")}
   }

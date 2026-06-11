@@ -33,7 +33,7 @@ type Stmt =
   StmtBranch | StmtWhile | StmtFor | StmtAssign |
   StmtDeclEnum | StmtDeclEnumMember | StmtInclude |
   StmtDirectiveLink | StmtDeclConstraint |
-  StmtGeneric | StmtNoop
+  StmtGeneric | StmtNoop | StmtDirectiveCInclude
 
 struct StmtExpr {
   expr Expr
@@ -149,6 +149,12 @@ struct StmtInclude {
 
 struct StmtDirectiveLink {
   lib string
+  span Span
+  id i32
+}
+
+struct StmtDirectiveCInclude {
+  header string
   span Span
   id i32
 }

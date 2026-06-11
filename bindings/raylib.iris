@@ -1,4 +1,5 @@
 #link "raylib"
+#cinclude "raylib.h"
 
 // structs
 

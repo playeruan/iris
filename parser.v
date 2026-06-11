@@ -803,6 +803,14 @@ fn (mut p Parser) parse_stmt() Stmt {
             id: p.next_id()
           }
         }
+        .d_cinclude {
+          p.advance() 
+          StmtDirectiveCInclude {
+            header: p.expect(.l_string).text
+            span: p.span
+            id: p.next_id()
+          }
+        }
         else {p.parse_error("invalid directive ${p.peek().text}")}
       }
 

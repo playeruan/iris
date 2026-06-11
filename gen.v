@@ -17,6 +17,7 @@ struct Generator {
   span Span
 
   libs_to_link []string
+  hs_to_include []string
 }
 
 struct GeneratorResult {
@@ -331,6 +332,11 @@ fn (mut g Generator) gen_stmt(s Stmt) {
         g.libs_to_link << s.lib
       }
     }
+    StmtDirectiveCInclude {
+      if s.header !in g.hs_to_include {
+        g.hs_to_include << s.header
+      }
+    }
     StmtDeclConstraint {}
     StmtGeneric {}
     //else {g.gen_error("unimplemented stmt ${s}")}
@@ -348,13 +354,18 @@ fn Generator.gen_program(checked_ast CheckedAST) GeneratorResult {
     g.gen_stmt(stmt)
   }
 
+  for header in g.hs_to_include {
+    g.gend_includes.writeln("#include <${header}>")
+  }
+  
   g.gend_includes.writeln("#include <stdio.h>")
   g.gend_includes.writeln("#include <stdint.h>")
   g.gend_includes.writeln("#include <stdlib.h>")
+  g.gend_includes.writeln("#include <stdbool.h>")
   g.gend_includes.writeln("#include <string.h>")
   g.gend_includes.writeln("#include <assert.h>")
   g.gend_includes.writeln("#include <math.h>")
-  g.gend_includes.writeln("#include <raylib.h>")
+
 
   g.gend_main.writeln("int main(void) {\n\treturn ${g.mangle_ident("main")}();\n}")
 

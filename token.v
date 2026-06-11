@@ -116,6 +116,7 @@ enum TokKind as u8 {
   // directives
   d_extname
   d_link
+  d_cinclude
 
   invalid
 }
@@ -235,6 +236,7 @@ fn Token.from_str(s string) ?TokKind {
 
     "extname" {.d_extname}
     "link"    {.d_link}
+    "cinclude"{.d_cinclude}
 
     "ret"   {.ret}
     "if"    {.if}
