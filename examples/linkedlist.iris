@@ -1,7 +1,7 @@
 include "../std/linkedlist.iris"
 
 main: () -> i32 {
-    ll: ^LinkedListNode<u8> = nullptr;
+    ll: ^LinkedListNode<i32> = nullptr;
     ll_append(&ll, 69);
     ll_append(&ll, 420);
     ll_append(&ll, 1337);
