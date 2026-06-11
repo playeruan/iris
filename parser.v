@@ -674,34 +674,34 @@ fn (mut p Parser) parse_stmt() Stmt {
     }
     .include {
       p.advance()
-      path := p.expect(.l_string)
+      path := os.abs_path(os.join_path_single(os.dir(p.span.file), p.expect(.l_string).text))
 
-      if path.text == p.span.file {
+      if path == p.span.file {
         p.parse_error("recursive include statements are not allowed") 
       }
 
-      if path.text in p.parsed_files {
-        p.parse_warning("skipping already included file ${path.text}")
+      if path in p.parsed_files {
+        p.parse_warning("skipping already included file ${path}")
         return StmtInclude{
-          path: path.text
+          path: path
           span: p.span
           id: p.next_id()
         }  
       }
 
-      if !os.exists(path.text) {
-        p.parse_error("imported file ${path.text} does not exist")
+      if !os.exists(path) {
+        p.parse_error("imported file ${path} does not exist")
       }
 
-      new_toks := Lexer.lex_file(path.text)
-      p.parsed_files << path.text
+      new_toks := Lexer.lex_file(path)
+      p.parsed_files << path
       inserted_result := Parser.parse_program(new_toks, p.next_id(), p.parsed_files)
       p.ast << inserted_result.ast
       p.last_id = inserted_result.last_id
       p.parsed_files = inserted_result.parsed_files
 
       StmtInclude{
-        path: path.text
+        path: path
         span: p.span
         id: p.next_id()
       }
@@ -874,7 +874,7 @@ fn (mut p Parser) parse_func_type(qualifs []TypeQualifier) TypeFunc {
 
 fn Parser.parse_program(toks []Token, start_id int, parsed_files []string) ParserResult {
   mut p := Parser{toks: toks, last_id: start_id}
-  p.parsed_files << parsed_files 
+  p.parsed_files << parsed_files.map(os.abs_path(it))
   for p.peek().kind != .eof {
     p.ast << p.parse_stmt()
   }

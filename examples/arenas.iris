@@ -1,4 +1,4 @@
-include "std/arena.iris"
+include "../std/arena.iris"
 
 main: () -> i32 {
   a: Arena = arena(sizeof(i32)*16);

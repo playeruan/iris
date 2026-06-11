@@ -1,5 +1,5 @@
 
-extern printf: (FMT: const []i8, ...const any)
+extern printf: (FMT: const ^i8, ...const any)
 extern abs: pure (X: const i32) -> i32
 
 extern malloc: (SIZE: const u32) -> ^void

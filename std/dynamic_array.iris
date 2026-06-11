@@ -1,4 +1,4 @@
-include "bindings/libc.iris"
+include "../bindings/libc.iris"
 
 generic T
 struct DynamicArray {
@@ -9,22 +9,22 @@ struct DynamicArray {
 
 
 generic T
-da_create: (init_vals: []T, init_size: i32) -> DynamicArray<T> {
+da_create: (init_vals: ^T, init_size: i32) -> DynamicArray<T> {
   MIN_CAPACITY: const i32 = 4;
-  SIZE: const i32 = init_size;
+  size: i32 = init_size;
 
   da: DynamicArray<T> = DynamicArray<T>(nullptr, MIN_CAPACITY, 0);
   da.array = malloc(sizeof(T)*MIN_CAPACITY);
 
-  while SIZE >= da.capacity {
+  while size >= da.capacity {
     da_grow(&da);
   }
   i: i32 = 0;
-  while i < SIZE {
+  while i < size {
     da.array[i] = init_vals[i];
     ++i;
   }
-  da.size = SIZE;
+  da.size = size;
   ret da;
 }
 

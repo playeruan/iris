@@ -1,6 +1,8 @@
 
 module main
 
+// TODO: fix cast to pointer
+
 struct Checker {
   mut: 
   table SymbolTable
@@ -715,6 +717,7 @@ fn (mut c Checker) check_expr(expr Expr) Type {
       if cast_types(what, c.resolve_type(expr.type)) == none {
         c.checker_error("cannot cast ${what} to ${expr.type}")
       }
+      c.result.resolved[expr.id] = c.resolve_type(expr.type)
       c.resolve_type(expr.type)
     }
     //else {c.checker_error("unimplemented check_expr() for ${expr}")}
@@ -762,7 +765,7 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
 
       j := c.check_assignment(vt, decl_t, stmt.sym.name)
 
-      if !are_types_equal(vt, j) && !(decl_t is TypeStruct) && vt !is TypeArray {
+      if !are_types_equal(vt, j) {
         c.result.implicit_casts[stmt.value.id] = j
       }
 

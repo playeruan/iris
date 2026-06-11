@@ -1,5 +1,5 @@
-include "bindings/libc.iris"
-include "bindings/raylib.iris"
+include "../bindings/libc.iris"
+include "../bindings/raylib.iris"
 
 foo: (x: i32) -> i32 {
   ret x;
@@ -17,7 +17,9 @@ main: () -> i32 {
 
   printf("size: %u\n", sizeof(Vector4));
 
-  text: string = load_file_text("source.iris");
+  text: ^i8 = load_file_text("source.iris");
+
+  frames: i32 = 0;
 
   while !window_should_close() {
     begin_drawing();
@@ -25,6 +27,10 @@ main: () -> i32 {
     draw_text(text, 0, 0, 18, BLACK);
     end_drawing();
     printf("%f %f\n", get_frame_time(), get_time());
+    ++frames;
+    if frames > 60*3 {
+      break;
+    }
   }
 
   unload_file_text(text);

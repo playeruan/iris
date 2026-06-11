@@ -1,4 +1,4 @@
-include "std/linkedlist.iris"
+include "../std/linkedlist.iris"
 
 main: () -> i32 {
     ll: ^LinkedListNode<u8> = nullptr;
