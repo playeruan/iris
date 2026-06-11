@@ -173,7 +173,13 @@ fn (mut g Generator) gen_expr(e Expr) string {
       ExprBinary {"(${g.gen_expr(e.left)}${e.op}${g.gen_expr(e.right)})"}
       ExprUnary  {"(${e.op}${g.gen_expr(e.operand)})"}
       ExprIndex  {"${g.gen_expr(e.indexee)}[${g.gen_expr(e.idx)}]"}
-      ExprAccess {"${g.gen_expr(e.accessee)}.${e.member.name}"}
+      ExprAccess {
+        if g.checked_ast.enum_accesses.contains(e.id) {
+          "${e.member.name}"
+        } else {
+          "${g.gen_expr(e.accessee)}.${e.member.name}"
+        }
+      }
     } + post
   }
 }
@@ -287,7 +293,11 @@ fn (mut g Generator) gen_stmt(s Stmt) {
       g.gend_struct_decl.writeln("};")
     }
     StmtDeclEnumMember {
-      g.gend_struct_decl.writeln("\t${g.mangle_ident(s.name)},")
+      mut es := s.name
+      if s.override_value != none {
+        es += " = ${g.gen_expr(s.override_value)}" 
+      }
+      g.gend_struct_decl.writeln("\t${es},")
     }
     StmtAssign {
       g.writeln_tabbed("${g.gen_expr(s.assignee)} ${s.op} ${g.gen_expr(s.val)};")
@@ -342,6 +352,7 @@ fn Generator.gen_program(checked_ast CheckedAST) GeneratorResult {
   g.gend_includes.writeln("#include <stdint.h>")
   g.gend_includes.writeln("#include <stdlib.h>")
   g.gend_includes.writeln("#include <string.h>")
+  g.gend_includes.writeln("#include <assert.h>")
   g.gend_includes.writeln("#include <math.h>")
   g.gend_includes.writeln("#include <raylib.h>")
 

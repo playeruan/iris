@@ -1,0 +1,13 @@
+include "../bindings/libc.iris"
+
+enum Error {
+  OK,
+  ASSERT = 2,
+}
+
+assert_msg: (CONDITION: const bool, MSG: const ^i8) {
+  if !CONDITION {
+    printf("ASSERT FAILED: %s\n", MSG);
+    exit(Error.ASSERT@i32);
+  }
+}

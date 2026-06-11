@@ -1,0 +1,16 @@
+include "../std/array.iris"
+include "../std/errors.iris"
+
+main: () -> i32 {
+  xs: Array<u8> = arr_create<u8>(3, [2, 4, 1]);
+  arr_insert(xs, 1, 9);
+  i: i32 = 0;
+  assert_msg(arr_at(xs, 0) == 2, "arr_at(xs, 0) should be 2");
+  assert_msg(arr_at(xs, 1) == 9, "arr_at(xs, 1) should be 9");
+  assert_msg(arr_at(xs, 2) == 1, "arr_at(xs, 2) should be 1");
+  while i < arr_size(xs) {
+    printf("%d\n", arr_at(xs, i));
+    ++i;
+  }
+  ret 0;
+}

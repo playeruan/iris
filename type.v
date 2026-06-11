@@ -406,44 +406,41 @@ fn infer_type_args(type_params []string, param_types []Type, arg_types []Type) !
   return subst
 }
 
-fn (t Type) collapse_generic(gen_name string, type Type) Type {
+fn substitute_type(t Type, subst map[string]Type) Type {
   return match t {
-    TypeUnresolved, TypePrimitive, TypeEnum {
-      panic("not possible to collapse generic on ${t}")
+    TypeGeneric {
+      subst[t.name] or { t }
     }
     TypePointer {
-      TypePointer {inner: t.inner.collapse_generic(gen_name, type)}
+      TypePointer{qualifs: t.qualifs, inner: substitute_type(t.inner, subst)}
     }
     TypeArray {
-      TypeArray {inner: t.inner.collapse_generic(gen_name, type)}
+      TypeArray{qualifs: t.qualifs, inner: substitute_type(t.inner, subst)}
     }
-    TypeGeneric {
-      if t.name == gen_name {type} else {t}
+    TypeStruct {
+      if t.generic_args.len == 0 { return t }
+      TypeStruct{
+        qualifs: t.qualifs
+        name: t.name
+        generic_args: t.generic_args.map(substitute_type(it, subst))
+        generic_base: t.generic_base
+      }
     }
     TypeFunc {
-      new_ret := if t.ret.is_generic() && t.ret.get_generic_name() == gen_name {
-        t.ret.collapse_generic(gen_name, type)
-      } else {
-        t.ret
-      }
-      mut new_argts := []Type{}
-      for arg in t.arg_types {
-        new_argts << if arg is TypeGeneric && arg.name == gen_name {
-          type
-        } else {
-          arg
-        }
-      }
-      TypeFunc {
+      TypeFunc{
         qualifs: t.qualifs
-        ret: new_ret
-        arg_types: new_argts
+        arg_types: t.arg_types.map(substitute_type(it, subst))
         arg_names: t.arg_names
-        variadic_type: none // TODO: not sure
+        variadic_type: if vt := t.variadic_type { substitute_type(vt, subst) } else { none }
+        ret: substitute_type(t.ret, subst)
       }
     }
-    TypeStruct {panic("todo collapse generic on type struct")}
+    else { t }
   }
+}
+
+fn (t Type) collapse_generic(gen_name string, typ Type) Type {
+  return substitute_type(t, {gen_name: typ})
 }
 
 fn join_qualifs(a []TypeQualifier, b []TypeQualifier) []TypeQualifier {
@@ -555,7 +552,16 @@ fn join_unqual(a Type, b Type) ?Type {
     }
     if ua.type.is_int() && ub.type.is_int() {
       if ua.type.is_unsigned() != ub.type.is_unsigned() {
-        // TODO: handle signedness
+        larger_size := if ua.type.size() >= ub.type.size() { ua.type.size() } else { ub.type.size() }
+        if ua.type.is_unsigned() != ub.type.is_unsigned() {
+          // widen to signed of the larger size
+          return TypePrimitive{type: match larger_size {
+            1 { BuiltinType.i8 }
+            2 { BuiltinType.i16 }
+            else { BuiltinType.i32 }
+          }}
+        }
+        return if ua.type.size() >= ub.type.size() { ua } else { ub }
       }
       if ua.type.size() >= ub.type.size() {
         return ua

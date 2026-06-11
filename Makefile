@@ -1,8 +1,16 @@
+
+
+ifeq ($(OS),Windows_NT)
+	VCOMMAND := v.bat
+else
+	VCOMMAND := v
+endif
+
 all:
 ifdef path
-	v run . $(path) && ./out
+	${VCOMMAND} run . $(path) && ./out
 else
-	v run . && ./out
+	${VCOMMAND} run . && ./out
 endif
 
 clean:
@@ -17,3 +25,4 @@ test: $(TESTDIR)/*.iris
 		v run . "./$${file}" && ./out; \
 		echo; \
 	done
+	rm out.c out

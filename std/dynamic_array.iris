@@ -44,6 +44,17 @@ da_append: (da: ^DynamicArray<T>, val: T) {
   ++da^.size;
 }
 
+generic T 
+da_insert: (da: ^DynamicArray<T>, IDX: const i32, val: T) {
+  while IDX > da^.capacity {
+    da_grow(da);
+  }
+  da^.array[IDX] = val;
+  if da^.size < IDX {
+    da^.size = IDX@i32;
+  }
+}
+
 generic T
 da_prepend: (da: ^DynamicArray<T>, val: T) {
   if da == nullptr {ret;}
@@ -58,18 +69,7 @@ da_prepend: (da: ^DynamicArray<T>, val: T) {
   }
   ++da^.size;
   memmove(da^.array+1, da^.array, (da^.capacity-1)*sizeof(T));
-  da^.array[0] = val;
-}
-
-generic T 
-da_insert: (da: ^DynamicArray<T>, IDX: const i32, val: T) {
-  while IDX > da^.capacity {
-    da_grow(da);
-  }
-  da^.array[IDX] = val;
-  if da^.size < IDX {
-    da^.size = IDX@i32;
-  }
+  da_insert(da, 0, val);
 }
 
 generic T

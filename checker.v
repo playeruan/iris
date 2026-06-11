@@ -28,6 +28,7 @@ struct CheckedAST {
   monomorph_decls []Stmt //[]Decl
   resolved_calls map[i32]string
   resolved_structs map[i32]string
+  enum_accesses []i32 // array of ids for accesses that have to be generated without the accessee
 }
 
 struct GenericDecl {
@@ -600,6 +601,14 @@ fn (mut c Checker) check_expr(expr Expr) Type {
               c.checker_error("could not infer generic type args for ${expr.callee.name}: ${err}" )
             }
           }
+
+          for i, arg_t in arg_types {
+            if i < callee_typ.arg_types.len {
+              param_t := substitute_type(callee_typ.arg_types[i], subst)
+              c.check_assignment(arg_t, param_t, "argument ${i + 1} of ${expr.callee.name}")
+            }
+          }
+
           c.enforce_constraints(expr.callee.name, subst)
           mono := c.instantiate_func(expr.callee.name, subst) or {
             c.checker_error("could not instantiate generic function ${expr.callee.name}: ${err}")
@@ -696,6 +705,7 @@ fn (mut c Checker) check_expr(expr Expr) Type {
         if lt.name !in c.table.enums {
           c.checker_error("undeclared type ${Type(lt)}")
         }
+        c.result.enum_accesses << expr.id
         lt
       } else {
         c.checker_error("cannot access from type ${lt}")

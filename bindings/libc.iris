@@ -13,3 +13,4 @@ extern strcat: (dst: ^i8, SRC: const ^i8) -> ^i8
 extern strcpy: (dst: ^i8, SRC: const ^i8) -> ^i8
 
 extern exit: (STATUS: const i32)
+extern assert: (CONDITION: const bool)
