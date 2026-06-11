@@ -58,6 +58,7 @@ struct ExprGroup {
 struct ExprCall {
   callee Expr
   argv []Expr
+  generic_args []Type
   id i32
 }
 

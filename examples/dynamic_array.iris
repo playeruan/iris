@@ -1,0 +1,19 @@
+include "../std/dynamic_array.iris"
+
+main: () -> i32 {
+  da_int: DynamicArray<i32> = da_create<i32>(5);
+  da_fill(&da_int, 3);
+  da_append(&da_int, 4);
+  da_prepend(&da_int, 2);
+  printf("da_int.size = %d\n", da_int.size);
+  if da_int.size != 7 {
+    printf("WRONG ARRAY SIZE != 7\n");
+    ret 1;
+  }
+  i: i32 = 0;
+  while i < da_int.size {
+    printf("da_int[%d] = %d\n", i, da_at(da_int, i));
+    ++i;
+  }
+  ret 0;
+}

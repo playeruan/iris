@@ -70,6 +70,12 @@ fn (mut p Parser) expect(k TokKind) Token {
   return p.advance()
 }
 
+fn (p Parser) peek_is_type_start() bool {
+  k := p.peek().kind
+  return k.is_primitive_type() || k.is_type_qualifier() || k == .o_caret || k == .lsquare
+    || (k == .identifier && p.peek().text.starts_with_capital())
+}
+
 // parsing expressions
 
 fn (mut p Parser) parse_type_qualifs() []TypeQualifier {
@@ -291,6 +297,16 @@ fn (mut p Parser) parse_binary(left Expr, op string, prec Precedence) Expr {
   }
 }
 
+fn (mut p Parser) parse_call_with_generic_args(callee ExprVar, generic_args []Type) ExprCall {
+  mut argv := []Expr{}
+  for p.peek().kind != .rparen {
+    argv << p.parse_expr(.literal)
+    if p.peek().kind != .rparen { p.expect(.comma) }
+  }
+  p.expect(.rparen)
+  return ExprCall{ callee: callee, argv: argv, generic_args: generic_args, id: p.next_id() }
+}
+
 fn (mut p Parser) parse_expr(pr Precedence) Expr {
   mut expr := p.parse_primary()
 
@@ -324,6 +340,21 @@ fn (mut p Parser) parse_expr(pr Precedence) Expr {
         ExprCast{
           castee: expr, type: t
           id: p.next_id()
+        }
+      }
+      .o_lt {
+        if expr is ExprVar && p.peek_is_type_start() {
+          mut generic_args := []Type{}
+          for p.peek().kind != .o_gt {
+            generic_args << p.parse_type()
+            if p.peek().kind == .comma { p.advance() }
+          }
+          p.expect(.o_gt)
+          p.expect(.lparen)
+          p.parse_call_with_generic_args(expr, generic_args)
+        } else {
+          right := p.parse_expr(.comparison)
+          ExprBinary{left: expr, op: "<", right: right, id: p.next_id()}
         }
       }
       else {p.parse_binary(expr, op_tok.text, op_tok.kind.precedence())}
@@ -681,7 +712,6 @@ fn (mut p Parser) parse_stmt() Stmt {
       }
 
       if path in p.parsed_files {
-        p.parse_warning("skipping already included file ${path}")
         return StmtInclude{
           path: path
           span: p.span

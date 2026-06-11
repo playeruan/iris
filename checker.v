@@ -103,17 +103,17 @@ fn (mut c Checker) clone_expr(e Expr) Expr {
     ExprLiteralNullptr { ExprLiteralNullptr{      id: c.next_id()} }
     ExprLiteralStruct  { ExprLiteralStruct{...e,  id: c.next_id(), argv: e.argv.map(c.clone_expr(it))} }
     ExprLiteralArray   { ExprLiteralArray{...e,   id: c.next_id(), argv: e.argv.map(c.clone_expr(it))} }
-    ExprLiteralString  { ExprLiteralString{...e,   id: c.next_id() } }
-    ExprGroup          { ExprGroup{...e,           id: c.next_id(), inner: c.clone_expr(e.inner)} }
-    ExprCall           { ExprCall{...e,            id: c.next_id(), callee: c.clone_expr(e.callee), argv: e.argv.map(c.clone_expr(it))} }
-    ExprIndex          { ExprIndex{...e,           id: c.next_id(), indexee: c.clone_expr(e.indexee), idx: c.clone_expr(e.idx)} }
-    ExprAccess         { ExprAccess{...e,          id: c.next_id(), accessee: c.clone_expr(e.accessee)} }
-    ExprRef            { ExprRef{...e,             id: c.next_id(), inner: c.clone_expr(e.inner)} }
-    ExprDeref          { ExprDeref{...e,           id: c.next_id(), inner: c.clone_expr(e.inner)} }
-    ExprUnary          { ExprUnary{...e,           id: c.next_id(), operand: c.clone_expr(e.operand)} }
-    ExprBinary         { ExprBinary{...e,          id: c.next_id(), left: c.clone_expr(e.left), right: c.clone_expr(e.right)} }
-    ExprCast           { ExprCast{...e,            id: c.next_id(), castee: c.clone_expr(e.castee)} }
-    ExprType           { ExprType{...e,            id: c.next_id()} }
+    ExprLiteralString  { ExprLiteralString{...e,  id: c.next_id() } }
+    ExprGroup          { ExprGroup{...e,          id: c.next_id(), inner: c.clone_expr(e.inner)} }
+    ExprCall           { ExprCall{...e,           id: c.next_id(), callee: c.clone_expr(e.callee), argv: e.argv.map(c.clone_expr(it)), generic_args: e.generic_args} }
+    ExprIndex          { ExprIndex{...e,          id: c.next_id(), indexee: c.clone_expr(e.indexee), idx: c.clone_expr(e.idx)} }
+    ExprAccess         { ExprAccess{...e,         id: c.next_id(), accessee: c.clone_expr(e.accessee)} }
+    ExprRef            { ExprRef{...e,            id: c.next_id(), inner: c.clone_expr(e.inner)} }
+    ExprDeref          { ExprDeref{...e,          id: c.next_id(), inner: c.clone_expr(e.inner)} }
+    ExprUnary          { ExprUnary{...e,          id: c.next_id(), operand: c.clone_expr(e.operand)} }
+    ExprBinary         { ExprBinary{...e,         id: c.next_id(), left: c.clone_expr(e.left), right: c.clone_expr(e.right)} }
+    ExprCast           { ExprCast{...e,           id: c.next_id(), castee: c.clone_expr(e.castee)} }
+    ExprType           { ExprType{...e,           id: c.next_id()} }
     ExprSizeof         { ExprSizeof{...e, id: c.next_id(), expr: c.clone_expr(e.expr)} }
   }
 }
@@ -584,8 +584,21 @@ fn (mut c Checker) check_expr(expr Expr) Type {
           for argv in expr.argv {
             arg_types << c.check_expr(argv)
           }
-          subst := infer_type_args(gdecl.type_params, callee_typ.arg_types, arg_types) or {
-            c.checker_error("could not infer generic type args for ${expr.callee.name}: ${err}")
+          subst := if expr.generic_args.len > 0 {
+            // explicit type args
+            if expr.generic_args.len != gdecl.type_params.len {
+              c.checker_error("${expr.callee.name} expects ${gdecl.type_params.len} type args, got ${expr.generic_args.len}")
+            }
+            mut s := map[string]Type{}
+            for i, tp in gdecl.type_params {
+              s[tp] = c.resolve_type(expr.generic_args[i])
+            }
+            s
+          } else {
+            // inferred type args
+            infer_type_args(gdecl.type_params, callee_typ.arg_types, arg_types) or {
+              c.checker_error("could not infer generic type args for ${expr.callee.name}: ${err}" )
+            }
           }
           c.enforce_constraints(expr.callee.name, subst)
           mono := c.instantiate_func(expr.callee.name, subst) or {

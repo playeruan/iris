@@ -16,6 +16,4 @@ test: $(TESTDIR)/*.iris
 		echo; \
 		v run . "./$${file}" && ./out; \
 		echo; \
-		echo "----- success -----"; \
-		echo; \
 	done

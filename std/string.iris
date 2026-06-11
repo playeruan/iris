@@ -1,0 +1,33 @@
+include "../bindings/libc.iris"
+include "dynamic_array.iris"
+
+struct String {
+    chars: DynamicArray<i8>;
+}
+
+str_create: (str_i8_array: ^i8) -> String {
+    dim: i32 = strlen(str_i8_array)+1;
+    underlying_da: DynamicArray<i8> = da_create<i8>(dim);
+    da_insert_array(&underlying_da, 0, str_i8_array, dim);
+    str: String = String(DynamicArray<i8>(nullptr, 0, 0));
+    str.chars = underlying_da;
+    ret str;
+}
+
+str_to_i8: pure (str: String) -> ^i8 {
+    ret str.chars.array;
+}
+
+str_len: pure (str: String) -> u32 {
+    ret str.chars.size;
+}
+
+str_concat: (str1: String, str2: String) -> String {
+    tmp: ^i8 = malloc(sizeof(i8)*(str_len(str1)+str_len(str2)-1));
+    strcpy(tmp, str_to_i8(str1));
+    strcat(tmp, str_to_i8(str2));
+    concat: String = str_create(tmp);
+    free(tmp);
+    ret concat;
+}
+

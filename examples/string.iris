@@ -1,0 +1,17 @@
+include "../bindings/libc.iris"
+include "../std/string.iris"
+
+main: () -> i32 {
+  s1: String = str_create("Hello, ");
+  s2: String = str_create("World!");
+  s3: String = str_concat(s1, s2);
+  sum_m_1: i32 = str_len(s1) + str_len(s2) - 1;
+  printf("%d + %d - 1 = %d\n", str_len(s1), str_len(s2), str_len(s3));
+  if sum_m_1 != str_len(s3) {
+    printf("WRONG STRING SIZE WHEN SUMMING\n"); 
+    ret 1;
+  }
+  printf("\"%s\" + \"%s\" = \"%s\"\n",str_to_i8(s1), str_to_i8(s2), str_to_i8(s3));
+  ret 0;
+}
+

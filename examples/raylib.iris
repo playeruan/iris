@@ -28,7 +28,7 @@ main: () -> i32 {
     end_drawing();
     printf("%f %f\n", get_frame_time(), get_time());
     ++frames;
-    if frames > 60*3 {
+    if frames > 60*1 {
       break;
     }
   }

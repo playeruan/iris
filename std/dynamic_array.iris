@@ -9,22 +9,16 @@ struct DynamicArray {
 
 
 generic T
-da_create: (init_vals: ^T, init_size: i32) -> DynamicArray<T> {
+da_create: (INIT_SIZE: const i32) -> DynamicArray<T> {
   MIN_CAPACITY: const i32 = 4;
-  size: i32 = init_size;
 
   da: DynamicArray<T> = DynamicArray<T>(nullptr, MIN_CAPACITY, 0);
   da.array = malloc(sizeof(T)*MIN_CAPACITY);
 
-  while size >= da.capacity {
+  while INIT_SIZE >= da.capacity {
     da_grow(&da);
   }
-  i: i32 = 0;
-  while i < size {
-    da.array[i] = init_vals[i];
-    ++i;
-  }
-  da.size = size;
+  da.size = INIT_SIZE@i32;
   ret da;
 }
 
@@ -39,7 +33,8 @@ da_append: (da: ^DynamicArray<T>, val: T) {
   if da == nullptr {ret;}
   if da^.size == 0 && da^.capacity == 0 {
     // freed but reused, just re-create it
-    ^da = da_create([val], 1);
+    ^da = da_create<T>(1);
+    da_insert(da, 0, val);
     ret;
   }
   if da^.size+1 >= da^.capacity {
@@ -54,24 +49,35 @@ da_prepend: (da: ^DynamicArray<T>, val: T) {
   if da == nullptr {ret;}
   if da^.size == 0 && da^.capacity == 0 {
     // freed but reused, just re-create it
-    ^da = da_create([val], 1);
+    ^da = da_create<T>(1);
+    da_insert(da, 0, val);
     ret;
   }
   if da^.size+1 >= da^.capacity {
     da_grow(da);
   }
+  ++da^.size;
   memmove(da^.array+1, da^.array, (da^.capacity-1)*sizeof(T));
   da^.array[0] = val;
 }
 
 generic T 
-da_insert: (da: ^DynamicArray<T>, idx: i32, val: T) {
-  while idx > da^.capacity {
+da_insert: (da: ^DynamicArray<T>, IDX: const i32, val: T) {
+  while IDX > da^.capacity {
     da_grow(da);
   }
-  da^.array[idx] = val;
-  if da^.size < idx {
-    da^.size = idx;
+  da^.array[IDX] = val;
+  if da^.size < IDX {
+    da^.size = IDX@i32;
+  }
+}
+
+generic T
+da_insert_array: (da: ^DynamicArray<T>, IDX: const i32, vals: ^T, vals_size: i32) {
+  i: i32 = 0;
+  while i < vals_size {
+    da_insert(da, IDX + i, vals[i]);
+    ++i;
   }
 }
 
@@ -86,6 +92,20 @@ da_free: (da: ^DynamicArray<T>) {
 }
 
 generic T
-da_at: (da: DynamicArray<T>, idx: i32) -> T {
-  ret da.array[idx];
+da_at: pure (da: DynamicArray<T>, IDX: const i32) -> T {
+  ret da.array[IDX];
+}
+
+generic T
+da_is_empty: pure (da: DynamicArray<T>) -> bool {
+  ret da.size == 0;
+}
+
+generic T
+da_fill: (da: ^DynamicArray<T>, val: T) {
+  i: i32 = 0;
+  while i < da^.size {
+    da^.array[i] = val;
+    ++i;
+  }
 }
