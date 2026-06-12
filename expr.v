@@ -15,7 +15,8 @@ type Expr =
   ExprType | ExprCast | ExprLiteralStruct | 
   ExprLiteralArray | ExprRef | ExprDeref |
   ExprBinary | ExprUnary | ExprSizeof |
-  ExprLiteralNullptr | ExprLiteralString
+  ExprLiteralNullptr | ExprLiteralString |
+  ExprTypeof
 
 struct ExprVar {
   name string
@@ -109,6 +110,11 @@ struct ExprUnary {
 }
 
 struct ExprSizeof {
+  expr Expr 
+  id i32
+}
+
+struct ExprTypeof {
   expr Expr 
   id i32
 }

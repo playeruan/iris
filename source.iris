@@ -1,12 +1,24 @@
-include "std/errors.iris"
+include "bindings/libc.iris"
+include "std/any.iris"
+
+print_any: (x: Any) {
+  if x.val_type == i32 {
+    printf("%d\n", extract<i32>(x));
+  } elif x.val_type == f32 {
+    printf("%f\n", extract<f32>(x));
+  }
+}
 
 main: () -> i32 {
-
-  err: Error = 0@Error;
-  while err@i32 < Error.COUNT {
-    printf("%s\n", error_string(err));
-    ++err;
-  }
-
+  x: i32 = 2;
+  y: f32 = 2.2;
+  ax: Any = to_any(x);
+  ay: Any = to_any(y);
+  print_any(ax);
+  print_any(ay);
+  any_free(ax);
+  any_free(ay);
   ret 0;
 }
+
+

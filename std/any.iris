@@ -1,0 +1,26 @@
+include "../bindings/libc.iris"
+
+struct Any {
+  val: ^void;
+  val_type: type;
+}
+
+generic T
+to_any: (x: T) -> Any {
+  x_copy: ^T = malloc(sizeof(T))@^T;
+  ^x_copy = x;
+  ret Any(x_copy, T);
+}
+
+generic T
+extract: (a: Any) -> T {
+  if T != a.val_type {
+    printf("extracting from Any with different type!\n");
+  }
+  ret ^(a.val@^T);
+}
+
+any_free: (a: Any) {
+  free(a.val);
+  a.val_type = void;
+}

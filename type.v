@@ -65,6 +65,12 @@ enum BuiltinType as u8 {
   any
 }
 
+const all_builtins := [
+  BuiltinType.void, .i8, .i16,
+  .i32, .u8, .u16, .u32, .f32,
+  .f64, .bool, .type, .any
+]
+
 const any_type := TypePrimitive {
   type: .any
 }
@@ -94,6 +100,26 @@ fn BuiltinType.from_tok_kind(t TokKind) BuiltinType {
     .t_any    {.any}
     else      {
       panic("invalid TokKind ${t} to convert to BuiltinType")
+    }
+  }
+}
+
+fn BuiltinType.from_string(s string) BuiltinType {
+  return match s {
+    "i32"     {BuiltinType.i32}
+    "u32"     {.u32}
+    "i16"     {.i16}
+    "u16"     {.u16}
+    "i8"      {.i8}
+    "u8"      {.u8}
+    "f32"     {.f32}
+    "f64"     {.f64}
+    "bool"    {.bool}
+    "void"    {.void}
+    "type"    {.type}
+    "any"     {.any}
+    else      {
+      panic("invalid string ${s} to convert to BuiltinType")
     }
   }
 }
@@ -140,11 +166,16 @@ fn BuiltinType.smallest_int(from i64, unsigned bool) BuiltinType {
 type Type = 
   TypePrimitive | TypeFunc | TypePointer | 
   TypeArray | TypeStruct | TypeEnum |
-  TypeUnresolved | TypeGeneric
+  TypeUnresolved | TypeGeneric | TypeType
 
 struct TypePrimitive {
   qualifs []TypeQualifier
   type BuiltinType 
+}
+
+struct TypeType {
+  qualifs []TypeQualifier
+  name string
 }
 
 struct TypeFunc {
@@ -198,6 +229,9 @@ fn (t Type) str() string {
     TypePrimitive {
        t.type.str()
     }
+    TypeType {
+      "type ${t.name}"
+    }
     TypeStruct {
       "struct ${t.name}"
     }
@@ -250,6 +284,9 @@ fn (t Type) compact_str() string {
     TypePrimitive {
        t.type.str()
     }
+    TypeType {
+      "t_${t.name.to_lower()}"
+    }
     TypeStruct {
       "s_${t.name.to_lower()}"
     }
@@ -292,6 +329,7 @@ fn (t Type) with_qualifs(qs []TypeQualifier) Type {
     TypeEnum {TypeEnum{qualifs: qs, name: t.name, as: t.as}}
     TypeUnresolved{TypeUnresolved{qualifs: qs, name: t.name}}
     TypeGeneric {TypeGeneric{qualifs: qs, name: t.name}}
+    TypeType {TypeType{qualifs: qs, name: t.name}}
   }
 }
 
@@ -530,6 +568,9 @@ fn are_types_equal(a Type, b Type) bool {
     TypeGeneric {
       false // doesn't need to be aware
     }
+    TypeType {
+      ub is TypeType
+    }
   }
 }
 
@@ -539,7 +580,6 @@ fn join_unqual(a Type, b Type) ?Type {
 
   ua := a.unqual()
   ub := b.unqual()  
-
 
   if ua is TypePrimitive && ua.type == .any {return ub}
   if ub is TypePrimitive && ub.type == .any {return ua}
@@ -593,6 +633,9 @@ fn join_unqual(a Type, b Type) ?Type {
       return none
     }
   }
+
+  if ua is TypeType && ub is TypePrimitive && ub.type == .type { return ub }
+  if ub is TypeType && ua is TypePrimitive && ua.type == .type { return ua }
   
   if ua is TypeEnum {
     j := join_types(ua.as, ub)

@@ -100,6 +100,53 @@ fn (mut p Parser) parse_primary() Expr {
       id: p.next_id()
     }
   }
+  if t.kind == .identifier && t.text.starts_with_capital() && !t.text.is_upper() {
+    next := p.peek_next()
+    return match next.kind {
+      .lparen, .o_lt {
+        p.advance()
+        mut generic_args := []Type{}
+        if p.peek().kind == .o_lt {
+          p.advance()
+          for p.peek().kind != .o_gt {
+            generic_args << p.parse_type()
+            if p.peek().kind == .comma { p.advance() }
+          }
+          p.expect(.o_gt)
+        }
+        if p.peek().kind != .lparen {
+          ExprType {
+            type: TypeUnresolved {
+              name: t.text
+              generic_args: generic_args
+            }
+          }
+        } else {
+          p.expect(.lparen)
+          mut argv := []Expr{}
+          for p.peek().kind != .rparen {
+            argv << p.parse_expr(.literal)
+            if p.peek().kind != .rparen { p.expect(.comma) }
+          }
+          p.expect(.rparen)
+          ExprLiteralStruct{
+            type: TypeStruct{name: t.text}
+            generic_args: generic_args
+            argv: argv
+            id: p.next_id()
+          }
+        }
+      }
+      .o_eq, .rparen, .rbrace, .rsquare {
+        p.advance()
+        ExprVar{name: t.text, id: p.next_id()}
+      }
+      // everything else is a type expression
+      else {
+        ExprType{type: p.parse_type(), id: p.next_id()}
+      }
+    }
+  }
   p.advance()
   return match t.kind {
     .l_int    {
@@ -136,74 +183,43 @@ fn (mut p Parser) parse_primary() Expr {
       } 
     }
     .identifier {
-      if t.text.starts_with_capital() && (p.peek().kind == .lparen || p.peek().kind == .o_lt) {
-        // Struct instanciation
-        mut generic_args := []Type{}
-        if p.peek().kind == .o_lt { // smth like MyStruct<i32, i32>
+      if p.peek().kind == .o_caret {
+        mut ahead := u32(1)
+        for p.peek_ahead(ahead).kind == .o_caret {
+          ahead++;
+        }
+        if p.peek_ahead(ahead).kind == .dot {
+          mut tmp := ExprDeref {
+            inner: ExprVar {
+              name: t.text
+              id: p.next_id()
+            }
+            id: p.next_id()
+          }
+          for _ in 1..ahead {
+            tmp = ExprDeref {
+              inner: tmp
+              id: p.next_id()
+            }
+            p.advance()
+          }
           p.advance()
-          for p.peek().kind != .o_gt {
-            generic_args << p.parse_type()
-            if p.peek().kind == .comma { p.advance() }
-          }
-          p.expect(.o_gt)
-        }
-        p.expect(.lparen)
-        mut argv := []Expr{}
-        for p.peek().kind != .rparen {
-          argv << p.parse_expr(.literal)
-            if p.peek().kind != .rparen {
-              p.expect(.comma)
-            }
-        }
-        p.expect(.rparen)
-        ExprLiteralStruct{
-          type: TypeStruct {
-            qualifs: [.const]
-            name: t.text
-          }
-          generic_args: generic_args
-          argv: argv
-          id: p.next_id()
-        }
-      } else {
-        if p.peek().kind == .o_caret {
-          mut ahead := u32(1)
-          for p.peek_ahead(ahead).kind == .o_caret {
-            ahead++;
-          }
-          if p.peek_ahead(ahead).kind == .dot {
-            mut tmp := ExprDeref {
-              inner: ExprVar {
-                name: t.text
-                id: p.next_id()
-              }
+          p.advance()
+          return ExprAccess {
+            accessee: tmp
+            member: ExprVar {
+              name: p.expect(.identifier).text
               id: p.next_id()
             }
-            for _ in 1..ahead {
-              tmp = ExprDeref {
-                inner: tmp
-                id: p.next_id()
-              }
-              p.advance()
-            }
-            p.advance()
-            p.advance()
-            return ExprAccess {
-              accessee: tmp
-              member: ExprVar {
-                name: p.expect(.identifier).text
-                id: p.next_id()
-              }
-              id: p.next_id()
-            }
-          } else {
-            p.parse_error("expected token of kind dot, got ${p.peek_ahead(ahead).kind}")
+            id: p.next_id()
           }
+        } else {
+          p.parse_error("expected token of kind dot, got ${p.peek_ahead(ahead).kind}")
         }
-        ExprVar{
-          name: t.text
-          id: p.next_id()
-        }
+      }
+      ExprVar{
+        name: t.text
+        id: p.next_id()
       }
     }
     .lparen {
@@ -244,21 +260,21 @@ fn (mut p Parser) parse_primary() Expr {
     .sizeof {
       p.expect(.lparen)
       es := ExprSizeof{
-        expr: if p.peek().kind.is_type_qualifier()
-          || p.peek().kind.is_primitive_type()
-          || p.peek().kind == .o_caret
-          || p.peek().kind == .lsquare
-          || (p.peek().kind == .identifier && p.peek().text.starts_with_capital())
-          || (p.peek().kind == .identifier && p.peek_next().kind == .rparen) {
-          ExprType{type: p.parse_type(), id: p.next_id()}
-        } else {
-          p.parse_expr(.literal)
-        }
+        expr: p.parse_expr(.literal)
         id: p.next_id()
       }
       p.expect(.rparen)
       es
     }
+    .typeof {
+      p.expect(.lparen)
+      es := ExprTypeof{
+        expr: p.parse_expr(.literal)
+        id: p.next_id()
+      }
+      p.expect(.rparen)
+      es
+    } 
     .nullptr {
       ExprLiteralNullptr{id: p.next_id()}
     }
@@ -323,14 +339,19 @@ fn (mut p Parser) parse_expr(pr Precedence) Expr {
         }
       }
       .dot {
-        ident := p.expect(.identifier)
+        if p.peek().kind != .identifier {
+          p.expect(.identifier)
+        }
+
         ExprAccess{
-          accessee: expr, member: ExprVar{
-            name: ident.text
+          accessee: expr, 
+          member: ExprVar{
+            name: p.advance().text
             id: p.next_id()
           }
           id: p.next_id()
         }
+       
       }
       .dotdot {
         p.parse_error(".. syntax to access struct pointers is deprecated, use ^. instead") 
@@ -351,7 +372,7 @@ fn (mut p Parser) parse_expr(pr Precedence) Expr {
           }
           p.expect(.o_gt)
           p.expect(.lparen)
-          p.parse_call_with_generic_args(expr, generic_args)
+          p.parse_call_with_generic_args(expr as ExprVar, generic_args)
         } else {
           right := p.parse_expr(.comparison)
           ExprBinary{left: expr, op: "<", right: right, id: p.next_id()}

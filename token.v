@@ -105,6 +105,7 @@ enum TokKind as u8 {
   struct
   enum
   sizeof
+  typeof
 
   generic
   constraint
@@ -182,6 +183,7 @@ fn Token.from_str(s string) ?TokKind {
     "enum"  {.enum}
     "include" {.include}
     "sizeof" {.sizeof}
+    "typeof" {.typeof}
     "nullptr" {.nullptr}
     "generic" {.generic}
     "constraint" {.constraint}

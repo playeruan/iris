@@ -16,6 +16,7 @@ struct Checker {
   generic_params []string // current valid generic types
   mono_cache MonomorphCache
   last_id i32
+  last_type_id i32
 }
 
 struct CheckedAST {
@@ -29,6 +30,7 @@ struct CheckedAST {
   resolved_calls map[i32]string
   resolved_structs map[i32]string
   enum_accesses []i32 // array of ids for accesses that have to be generated without the accessee
+  type_id_map map[string]i32 // map[type name]type id
 }
 
 struct GenericDecl {
@@ -49,10 +51,14 @@ fn (c Checker) checker_error(s string) {
 	exit(1)
 }
 
-
 fn (mut c Checker) next_id() i32 {
   c.last_id++
   return c.last_id
+}
+
+fn (mut c Checker) next_type_id() i32 {
+  c.last_type_id++
+  return c.last_type_id
 }
 
 fn (mut c Checker) push_scope(stmt &Stmt) {
@@ -116,6 +122,7 @@ fn (mut c Checker) clone_expr(e Expr) Expr {
     ExprCast           { ExprCast{...e,           id: c.next_id(), castee: c.clone_expr(e.castee)} }
     ExprType           { ExprType{...e,           id: c.next_id()} }
     ExprSizeof         { ExprSizeof{...e, id: c.next_id(), expr: c.clone_expr(e.expr)} }
+    ExprTypeof         { ExprTypeof{...e, id: c.next_id(), expr: c.clone_expr(e.expr)} }
   }
 }
 
@@ -456,7 +463,7 @@ fn (mut c Checker) check_assignment(from Type, to Type, name string) Type {
     if !q.valid_for_type(from) {c.checker_error("qualifier ${q} not valid for type ${from.unqual()}")}
   }
   for q in to.qualifs {
-    if !q.valid_for_type(from) {c.checker_error("qualifier ${q} not valid for type ${to.unqual()}")}
+    if !q.valid_for_type(to) {c.checker_error("qualifier ${q} not valid for type ${to.unqual()}")}
   }
   j := join_types(from, to) or {
     c.checker_error("cannot implicitly cast ${from} to ${to} for ${name}")
@@ -473,7 +480,17 @@ fn (mut c Checker) check_expr(expr Expr) Type {
   assert(expr.id != 0)
   return match expr {
     ExprLiteralNullptr {TypePointer{inner: TypePrimitive{type: .void}}}
-    ExprType {TypePrimitive{type: .type}}
+    ExprType {
+      res := c.resolve_type(expr.type)
+      result := match res {
+        TypeStruct {Type(TypeType {name: res.name})}
+        TypeEnum   {TypeType {name: res.name}}
+        TypePrimitive {TypeType {name: res.type.str()}}
+        else {c.checker_error("Type expressions not supported for ${res} as of now")}
+      }
+      c.result.resolved[expr.id] = res 
+      result
+    }
     ExprLiteralPrimitive {expr.type} // no need to resolve because it's always known here
     ExprLiteralString {
       TypeArray {
@@ -504,7 +521,7 @@ fn (mut c Checker) check_expr(expr Expr) Type {
           resolved := c.resolve_type(expr.expr.type)
           // if it's a generic struct, instantiate it
           if resolved is TypeStruct && resolved.generic_args.len > 0 {
-            base := resolved.generic_base or { c.checker_error("unreachable") }
+            base := resolved.generic_base or { c.checker_error("unreachable ${@LINE}") }
             mut subst := map[string]Type{}
             gdecl := c.generic_decls[base] or { c.checker_error("${base} is not a generic type") }
             for i, tp in gdecl.type_params { subst[tp] = resolved.generic_args[i] }
@@ -516,6 +533,7 @@ fn (mut c Checker) check_expr(expr Expr) Type {
         ExprVar {
           is_type := expr.expr.name in c.generic_params
             || expr.expr.name in c.table.structs
+            || expr.expr.name in c.table.enums
             || expr.expr.name in c.generic_decls
             || is_builtin_type(expr.expr.name)
           if is_type {
@@ -528,6 +546,20 @@ fn (mut c Checker) check_expr(expr Expr) Type {
         else { c.check_expr(expr.expr) }
       }
       return TypePrimitive{type: .u32}
+    }
+
+    ExprTypeof {
+      t := c.check_expr(expr.expr)
+      c.result.resolved[expr.expr.id] = t
+      name := match t {
+        TypeStruct, TypeEnum {t.name}
+        TypePrimitive {t.type.str()}
+        TypeType      {"type"}
+        else {c.checker_error("TODO: rest")}
+      }
+      TypeType {
+        name: name
+      }
     }
 
     ExprLiteralStruct {
@@ -642,8 +674,31 @@ fn (mut c Checker) check_expr(expr Expr) Type {
       }
     }
     ExprVar {
+      if expr.name in c.generic_subst {
+        t := c.generic_subst[expr.name] or {c.checker_error("unreachable ${@LINE}")}
+        c.result.resolved[expr.id] = t 
+        return TypeType{name: Type(t).str()}
+      } 
+      if expr.name in c.table.structs {
+        sym_ := c.table.structs[expr.name] or {c.checker_error("unreachable ${@LINE}")}
+        c.result.resolved[expr.id] = sym_.type 
+        return TypeType{name: Type(sym_.type).str()}
+      }
       if expr.name in c.table.enums {
-        return c.table.enums[expr.name].type
+        sym_ := c.table.enums[expr.name] or {c.checker_error("unreachable ${@LINE}")}
+        c.result.resolved[expr.id] = sym_.type 
+        return TypeType{name: Type(sym_.type).str()}
+      }
+      if expr.name in c.generic_decls && c.generic_decls[expr.name].decl is StmtDeclStruct {
+        decl := c.generic_decls[expr.name] or {c.checker_error("unreachable ${@LINE}")}
+        decl_inner := decl.decl as StmtDeclStruct
+        c.result.resolved[expr.id] = decl_inner.sym.type
+        return TypeType{name: Type(decl_inner.sym.type).str()}
+      }
+      if is_builtin_type(expr.name) {
+        t := BuiltinType.from_string(expr.name)
+        c.result.resolved[expr.id] = TypePrimitive{type: t}
+        return TypeType{name: Type(TypePrimitive{type: t}).str()}
       }
       sym := c.current_scope.lookup_sym(expr.name) or {
         c.checker_error("undeclared symbol ${expr.name}")
@@ -701,17 +756,17 @@ fn (mut c Checker) check_expr(expr Expr) Type {
         }
         c.checker_error("member ${expr.member.name} doesn't exist in ${Type(lt)}")
 
-      } else if lt is TypeEnum {
-        if lt.name !in c.table.enums {
-          c.checker_error("undeclared type ${Type(lt)}")
+      } else if lt is TypeType {
+        if lt.name in c.table.enums {
+          c.result.enum_accesses << expr.id
+          esym := c.table.enums[lt.name]
+          esym.type
+        } else {
+          c.checker_error("cannot get member from non-enum type ${Type(lt)}")
         }
-        c.result.enum_accesses << expr.id
-        lt
       } else {
-        c.checker_error("cannot access from type ${lt}")
-        TypePrimitive{type: .void}
+        c.checker_error("cannot access from var of type ${lt}")
       }
-      //rt := c.check_expr(expr.member)
     }
     ExprIndex {
       lt := c.check_expr(expr.indexee)
@@ -1059,10 +1114,22 @@ fn Checker.check_program(parsed ParserResult) CheckedAST {
     last_id: parsed.last_id
   }
 
+  for t in all_builtins {
+    c.result.type_id_map[t.str()] = c.next_type_id()
+  }
+
 
   c.current_scope = c.table.root_scope
   for stmt in parsed.ast {
     c.check_stmt(stmt)
+  }
+
+  for name, _ in c.table.structs {
+    c.result.type_id_map[name] = c.next_type_id()
+  }
+  
+  for name, _ in c.table.enums {
+    c.result.type_id_map[name] = c.next_type_id()
   }
 
   c.result.table = c.table

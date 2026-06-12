@@ -1,0 +1,15 @@
+include "../bindings/libc.iris"
+include "../std/errors.iris"
+
+main: () -> i32 {
+  x: i32 = 2;
+  err: Error = Error.OK;
+  t: type = Error;
+  printf("sizeof(i32) = %d\n", sizeof(i32));
+  printf("sizeof(i16) = %d\n", sizeof(i16));
+  printf("sizeof(i8) = %d\n", sizeof(i8));
+  printf("sizeof(x) = %d\n", sizeof(x));
+  printf("sizeof(err) = %d\n", sizeof(err));
+  printf("sizeof(t) = %d\n", sizeof(t));
+  ret 0;
+}

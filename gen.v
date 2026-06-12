@@ -41,8 +41,17 @@ fn (mut g Generator) write_tabbed(s string) {
   g.gend_main.write_string("\t".repeat(g.tabs)+s)
 }
 
-fn (mut g Generator) mangle_ident(s string) string {
+fn (g Generator) mangle_ident(s string) string {
   return "iris_${s}_"
+}
+
+fn (g Generator) type_to_tid_str(t Type) string {
+  return match t {
+    TypePrimitive {"${t.type.str()}_tid"}
+    TypeStruct, TypeEnum {"${t.name}_tid"}
+    TypeType {"type_tid"}
+    else {g.gen_error("unrechable ${@LINE}")}
+  }
 }
 
 fn (mut g Generator) gen_type_left(t Type, is_ret bool) string {
@@ -59,9 +68,11 @@ fn (mut g Generator) gen_type_left(t Type, is_ret bool) string {
         .f64 {"double"}
         .bool {"bool"}
         .void {"void"}
+        .type {"TypeEnum"}
         else {g.gen_error("unimplemented type ${t.type}")}
       }
     }
+    TypeType {"TypeEnum"}
     TypePointer {"${g.gen_type_left(t.inner, is_ret)}*"}
     TypeArray   {
       if is_ret {"${g.gen_type_left(t.inner, is_ret)}*"}
@@ -111,6 +122,12 @@ fn (mut g Generator) gen_expr(e Expr) string {
           return "(sizeof(${g.gen_type_left(t, false)}))"
         }
         return "(sizeof(${g.gen_expr(e.expr)}))"
+      }
+      ExprTypeof {
+        t := g.checked_ast.resolved[e.expr.id] or {
+          g.gen_error("encountered unchecked ExprTypeof with ID ${e.id}")
+        }
+        g.type_to_tid_str(t)
       }
       ExprLiteralPrimitive {
         s := match e.type.type {
@@ -168,8 +185,19 @@ fn (mut g Generator) gen_expr(e Expr) string {
         }
         s + ")"
       }
-      ExprVar {g.mangle_ident(e.name)}
-      ExprType {g.gen_type_left(e.type, false)+g.gen_type_right(e.type, false)}
+      ExprVar {
+        if e.id in g.checked_ast.resolved {
+          resolved := g.checked_ast.resolved[e.id]
+          g.type_to_tid_str(resolved)
+        } else {
+          g.mangle_ident(e.name)
+        }
+      }
+      ExprType {
+        //g.gen_type_left(e.type, false)+g.gen_type_right(e.type, false)
+        resolved := g.checked_ast.resolved[e.id]
+        g.type_to_tid_str(resolved)
+      }
       ExprCast {"((${g.gen_type_left(g.checked_ast.resolved[e.id], false)})${g.gen_expr(e.castee)})"}
       ExprBinary {"(${g.gen_expr(e.left)}${e.op}${g.gen_expr(e.right)})"}
       ExprUnary  {"(${e.op}${g.gen_expr(e.operand)})"}
@@ -291,7 +319,7 @@ fn (mut g Generator) gen_stmt(s Stmt) {
       for m in s.members {
         g.gen_stmt(m)
       }
-      g.gend_struct_decl.writeln("};")
+      g.gend_struct_decl.writeln("};\n")
     }
     StmtDeclEnumMember {
       mut es := s.name
@@ -366,11 +394,18 @@ fn Generator.gen_program(checked_ast CheckedAST) GeneratorResult {
   g.gend_includes.writeln("#include <assert.h>")
   g.gend_includes.writeln("#include <math.h>")
 
-
   g.gend_main.writeln("int main(void) {\n\treturn ${g.mangle_ident("main")}();\n}")
 
   mut generated := ""
   generated += g.gend_includes.str()
+
+  generated += "// -- type enum --\n"
+  generated += "typedef enum {\n"
+  for t, id in g.checked_ast.type_id_map {
+    generated += "\t${t}_tid = ${id},\n"
+  }
+  generated += "} TypeEnum ;\n\n"
+
   generated += "// -- types --\n${g.gend_struct_decl}"
   generated += "// -- globals --\n${g.gend_globals}"
   generated += "// -- fn decl --\n${g.gend_fn_decl}"
