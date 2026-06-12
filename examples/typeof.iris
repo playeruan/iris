@@ -1,0 +1,11 @@
+include "../bindings/libc.iris"
+include "../std/errors.iris"
+
+main: () -> i32 {
+  assert_msg(typeof(2.2) == f32, "typeof(2.2) != f32");
+  assert_msg(typeof(18) == u8, "typeof(18) != u8");
+  assert_msg(typeof(280) == u16, "typeof(280) != u16");
+  assert_msg(typeof(Error) == type, "typeof(Error) != type");
+  assert_msg(typeof(Error.OK) == Error, "typeof(Error.OK) != Error");
+  ret 0;
+}
