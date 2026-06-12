@@ -4,6 +4,7 @@ enum Error {
   OK,
   FAIL_GENERIC = 1,
   ASSERT_FAILED = 2,
+  COUNT,
 }
 
 // TODO: allow casts to Enums

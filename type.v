@@ -593,6 +593,22 @@ fn join_unqual(a Type, b Type) ?Type {
       return none
     }
   }
+  
+  if ua is TypeEnum {
+    j := join_types(ua.as, ub)
+    if j != none {
+      if are_types_equal(ua.as, j) {return ub}
+    }
+    return none
+  }
+  
+  if ub is TypeEnum {
+    j := join_types(ub.as, ua)
+    if j != none {
+      if are_types_equal(ub.as, j) {return ua}
+    }
+    return none
+  }
 
   if ua is TypeArray && ub is TypeArray {
     j := join_unqual(ua.inner, ub.inner) or {return none}
@@ -668,12 +684,20 @@ fn cast_types(from Type, to Type) ?Type {
     return none 
   }
 
-  if uf is TypeEnum && ut == uf.as {
-    return ut
+  if uf is TypeEnum {
+    j := join_types(uf.as, ut)
+    if j != none {
+      if are_types_equal(uf.as, j) {return ut}
+    }
+    return none
   }
-  
-  if ut is TypeEnum && uf == ut.as {
-    return uf
+
+  if ut is TypeEnum {
+    j := join_types(ut.as, uf)
+    if j != none {
+      if are_types_equal(ut.as, j) {return ut}
+    }
+    return none
   }
 
   return none

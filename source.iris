@@ -1,12 +1,12 @@
-include "std/array.iris"
+include "std/errors.iris"
 
 main: () -> i32 {
-  xs: Array<u8> = arr_create<u8>(3, [2, 4, 1]);
-  arr_insert(xs, 1, 9);
-  i: i32 = 0;
-  while i < arr_size(xs) {
-    printf("%d\n", arr_at(xs, i));
-    ++i;
+
+  err: Error = 0@Error;
+  while err@i32 < Error.COUNT {
+    printf("%s\n", error_string(err));
+    ++err;
   }
+
   ret 0;
 }

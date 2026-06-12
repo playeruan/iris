@@ -738,11 +738,12 @@ fn (mut c Checker) check_expr(expr Expr) Type {
     }
     ExprCast {
       what := c.check_expr(expr.castee)
-      if cast_types(what, c.resolve_type(expr.type)) == none {
-        c.checker_error("cannot cast ${what} to ${expr.type}")
+      resolved := c.resolve_type(expr.type)
+      if cast_types(what, resolved) == none {
+        c.checker_error("cannot cast ${what} to ${resolved}")
       }
-      c.result.resolved[expr.id] = c.resolve_type(expr.type)
-      c.resolve_type(expr.type)
+      c.result.resolved[expr.id] = resolved 
+      resolved
     }
     //else {c.checker_error("unimplemented check_expr() for ${expr}")}
   }
