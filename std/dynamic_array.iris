@@ -18,7 +18,7 @@ da_create: (INIT_SIZE: const i32) -> DynamicArray<T> {
   while INIT_SIZE >= da.capacity {
     da_grow(&da);
   }
-  da.size = INIT_SIZE@i32;
+  da.size = INIT_SIZE;
   ret da;
 }
 
@@ -51,7 +51,7 @@ da_insert: (da: ^DynamicArray<T>, IDX: const i32, val: T) {
   }
   da^.array[IDX] = val;
   if da^.size < IDX {
-    da^.size = IDX@i32;
+    da^.size = IDX;
   }
 }
 

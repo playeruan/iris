@@ -1,23 +1,18 @@
-include "bindings/libc.iris"
-include "std/any.iris"
 
-print_any: (x: Any) {
-  if x.val_type == i32 {
-    printf("%d\n", extract<i32>(x));
-  } elif x.val_type == f32 {
-    printf("%f\n", extract<f32>(x));
-  }
+generic T
+struct Test {
+  X: const T;
+}
+
+struct Test2 {
+  X: const i32;
 }
 
 main: () -> i32 {
-  x: i32 = 2;
-  y: f32 = 2.2;
-  ax: Any = to_any(x);
-  ay: Any = to_any(y);
-  print_any(ax);
-  print_any(ay);
-  any_free(ax);
-  any_free(ay);
+  t: Test<i32> = Test<i32>(2);
+  t.X = 3; // TODO: fix type qualifiers for generic struct members
+  t2: Test2 = Test2(10);
+  t2.X = 12;
   ret 0;
 }
 

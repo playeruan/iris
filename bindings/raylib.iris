@@ -31,8 +31,8 @@ extern struct Color {
 extern struct Rectangle {
   x: f32;
   y: f32;
-  w: f32;
-  h: f32;
+  width: f32;
+  height: f32;
 }
 
 // colors
@@ -66,7 +66,7 @@ RAYWHITE: const Color = Color ( 245, 245, 245, 255 );
 
 // window related functions
 
-extern init_window: (W: const i32, H: const i32, TITLE: const ^i8) #extname InitWindow
+extern init_window: (width: i32, height: i32, TITLE: const ^i8) #extname InitWindow
 extern close_window: () #extname CloseWindow
 extern window_should_close: () -> bool #extname WindowShouldClose
 extern toggle_fullscreen: () #extname ToggleFullscreen
@@ -79,15 +79,15 @@ extern get_screen_height: () -> i32 #extname GetScreenHeight
 
 // drawing related functions
 
-extern clear_background: (COLOR: const Color) #extname ClearBackground
+extern clear_background: (color: Color) #extname ClearBackground
 extern begin_drawing: () #extname BeginDrawing
 extern end_drawing: () #extname EndDrawing
 
-extern draw_text: (text: ^i8, x: i32, y: i32, size: i32, COLOR: const Color) #extname DrawText
+extern draw_text: (TEXT: const ^i8, x: i32, y: i32, size: i32, color: Color) #extname DrawText
 
 // timing related functions
 
-extern set_target_fps: (FPS: const i32) #extname SetTargetFPS
+extern set_target_fps: (fps: i32) #extname SetTargetFPS
 extern get_time: () -> f64 #extname GetTime
 extern get_frame_time: () -> f32 #extname GetFrameTime
 extern get_fps: () -> i32 #extname GetFPS
@@ -107,7 +107,7 @@ extern get_mouse_x: () -> i32 #extname GetMouseX
 extern get_mouse_y: () -> i32 #extname GetMouseY
 extern get_mouse_position: () -> Vector2 #extname GetMousePosition
 extern get_mouse_delta: () -> Vector2 #extname GetMouseDelta
-extern set_mouse_position: (X: const i32, Y: const i32) #extname SetMousePosition
+extern set_mouse_position: (x: i32, y: i32) #extname SetMousePosition
 
 // files
 

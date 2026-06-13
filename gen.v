@@ -27,7 +27,7 @@ struct GeneratorResult {
 
 @[noreturn]
 fn (g Generator) gen_error(s string) {
-  eprintln("${g.span} Generation Error -> \"${s}\"")
+  eprintln("${g.span} Generation Error -> ${s}")
 	exit(1)
 }
 
@@ -99,8 +99,8 @@ fn (mut g Generator) gen_expr(e Expr) string {
     mut pre := ""
     mut post := ""
     if e.id in g.checked_ast.implicit_casts {
-      t := g.gen_type_left(g.checked_ast.implicit_casts[e.id], false)
-      pre = "((${t})"
+      t := g.checked_ast.implicit_casts[e.id]
+      pre = "((${g.gen_type_left(t, false)}${g.gen_type_right(t, false)})"
       post = ")"
     }
     return pre + match e {
@@ -119,9 +119,10 @@ fn (mut g Generator) gen_expr(e Expr) string {
       ExprSizeof {
         if e.id in g.checked_ast.resolved {
           t := g.checked_ast.resolved[e.id] or { TypePrimitive{type: .void} }
-          return "(sizeof(${g.gen_type_left(t, false)}))"
+          "(sizeof(${g.gen_type_left(t, false)}))"
+        } else {
+          "(sizeof(${g.gen_expr(e.expr)}))"
         }
-        return "(sizeof(${g.gen_expr(e.expr)}))"
       }
       ExprTypeof {
         t := g.checked_ast.resolved[e.expr.id] or {
@@ -162,12 +163,16 @@ fn (mut g Generator) gen_expr(e Expr) string {
       ExprLiteralArray {
         t := g.checked_ast.resolved[e.id] or { TypePrimitive{type: .void} }
         elem_t := if t is TypeArray { t.inner } else { Type(TypePrimitive{type: .void}) }
-        mut s := "(${g.gen_type_left(elem_t, false)}[]){"
+        prefix := if e.id !in g.checked_ast.implicit_casts && elem_t.is_complete_type() 
+          {
+            "(${g.gen_type_left(elem_t, false)}[])"
+          } else {""}
+        mut s := "${prefix}{"
         for i, argv in e.argv {
           s += g.gen_expr(argv)
           if i < e.argv.len - 1 { s += ", " }
         }
-        return s + "}"
+        s + "}"
       }
       
       ExprCall {

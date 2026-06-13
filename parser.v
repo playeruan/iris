@@ -30,12 +30,12 @@ fn (mut p Parser) next_id() i32 {
 
 @[noreturn]
 fn (p Parser) parse_error(s string) {
-  eprintln("${p.span} Parser Error -> \"${s}\"")
+  eprintln("${p.span} Parser Error -> ${s}")
 	exit(1)
 }
 
 fn (p Parser) parse_warning(s string) {
-  eprintln("${p.span} Parser Warning -> \"${s}\"")
+  eprintln("${p.span} Parser Warning -> ${s}")
 }
 
 fn (p Parser) peek() Token {
@@ -231,6 +231,14 @@ fn (mut p Parser) parse_primary() Expr {
       e
     }
     .lsquare {
+      if p.peek().kind == .rsquare {
+        p.advance()
+        if p.peek().kind.is_primitive_type() {
+          p.parse_error("cannot create 'type' literal of array type")
+        }
+        p.parse_error("empty array is not a valid expression") 
+      }
+      
       mut elems := []Expr{}
       for p.peek().kind != .rsquare {
         elems << p.parse_expr(.literal)
@@ -252,6 +260,9 @@ fn (mut p Parser) parse_primary() Expr {
       }
     }
     .o_caret { 
+      if p.peek().kind.is_primitive_type() {
+        p.parse_error("cannot create 'type' literal of pointer type")
+      }
       ExprDeref{
         inner: p.parse_expr(.prefix)
         id: p.next_id()

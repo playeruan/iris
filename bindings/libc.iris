@@ -1,16 +1,16 @@
 
-extern printf: (FMT: const ^i8, ...const any)
-extern abs: pure (X: const i32) -> i32
+extern printf: (FMT: const ^i8, ...any)
+extern abs: pure (x: i32) -> i32
 
-extern malloc: (SIZE: const u32) -> ^void
-extern realloc: (ptr: ^void, NEW_SIZE: const u32) -> ^void
+extern malloc: (size: u32) -> ^void
+extern realloc: (ptr: ^void, size: u32) -> ^void
 extern free: (ptr: ^void)
 
-extern memmove: (dest: ^void, SRC: ^const void, COUNT: const u32) -> ^void
+extern memmove: (dest: ^void, SRC: const ^ void, COUNT: const u32) -> ^void
 
-extern strlen: (STR: const ^i8) -> u32
+extern strlen: (STR: const ^ i8) -> u32
 extern strcat: (dst: ^i8, SRC: const ^i8) -> ^i8
 extern strcpy: (dst: ^i8, SRC: const ^i8) -> ^i8
 
-extern exit: (STATUS: const i32)
-extern assert: (CONDITION: const bool)
+extern exit: (status: i32)
+extern assert: (condition: bool)

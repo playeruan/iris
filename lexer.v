@@ -21,7 +21,7 @@ fn (l Lexer) tok(kind TokKind, value TokValue, text string) Token {
 
 @[noreturn]
 fn (l Lexer) lex_error(s string) {
-  eprintln("${l.span} Lexer Error -> \"${s}\"")
+  eprintln("${l.span} Lexer Error -> ${s}")
 	exit(1)
 }
 

@@ -6,7 +6,7 @@ include "../bindings/libc.iris"
 generic T
 struct Array {
   data: ^T;
-  size: const u32; // TODO: const member names uppercase
+  SIZE: const u32;
 }
 
 // creates an Array<T> of size SIZE and returns it.
@@ -19,7 +19,7 @@ arr_create: pure (SIZE: const u32, RAW_DATA: const ^T) -> Array<T> {
 
 generic T
 arr_size: pure (ARR: const Array<T>) -> u32 {
-  ret ARR.size;
+  ret ARR.SIZE;
 }
 
 generic T

@@ -35,13 +35,13 @@ fn (q TypeQualifier) join_rule() QualifierJoinRule {
 fn (q TypeQualifier) compat_direction() QualifierCompatDirection {
   return match q {
     .const {.value_subsumes_target}
-    .pure  {.target_subsumes_value}
+    .pure {.target_subsumes_value}
   }
 }
 
 fn (q TypeQualifier) valid_for_type(t Type) bool {
   valid := match t {
-    TypePrimitive, TypePointer, TypeArray, TypeStruct, TypeEnum {[TypeQualifier.const]}
+    TypePrimitive, TypePointer, TypeArray, TypeStruct, TypeEnum, TypeType {[TypeQualifier.const]}
     TypeFunc {[.pure]}
     else {[]}
   }
@@ -146,6 +146,11 @@ fn (t BuiltinType) is_float() bool {
 fn (t BuiltinType) is_unsigned() bool {
   assert(t.is_int())
   return t.str().starts_with("u")
+}
+
+fn (t Type) is_complete_type() bool {
+  if t is TypePrimitive && t.type == .void {return false}
+  return true
 }
 
 fn BuiltinType.smallest_int(from i64, unsigned bool) BuiltinType {
@@ -511,10 +516,11 @@ fn (t Type) is_any() bool {
 }
 
 fn is_type_compatible(from Type, to Type) bool {
-  
-  if !is_qualifs_compatible(from.qualifs, to.qualifs) { return false }
   match from {
-    TypePointer { return to.is_any() || (to is TypePointer && is_type_compatible(from.inner, to.inner)) }
+    TypePointer { 
+      if to is TypePointer && !is_qualifs_compatible(from.inner.qualifs, to.inner.qualifs) {return false}
+      return to.is_any() || (to is TypePointer && is_type_compatible(from.inner, to.inner)) 
+    }
     TypeArray   { 
       return to.is_any() 
       || ((to is TypeArray && is_type_compatible(from.inner, to.inner)) || 
@@ -528,7 +534,12 @@ fn is_type_compatible(from Type, to Type) bool {
       }
       return true
     }
-    else { return true }
+    else {
+      // only check non-const qualifiers
+      if !is_qualifs_compatible(from.qualifs.filter(it != .const),
+                                 to.qualifs.filter(it != .const)) { return false }
+      return true
+    }
   }
 }
 
@@ -576,13 +587,16 @@ fn are_types_equal(a Type, b Type) bool {
 
 fn join_unqual(a Type, b Type) ?Type {
 
+
   if are_types_equal(a, b) { return a.unqual() }
+
 
   ua := a.unqual()
   ub := b.unqual()  
 
   if ua is TypePrimitive && ua.type == .any {return ub}
   if ub is TypePrimitive && ub.type == .any {return ua}
+  
 
   non_joinable := [BuiltinType.void, .bool]
   if ua is TypePrimitive && ub is TypePrimitive {
@@ -593,15 +607,12 @@ fn join_unqual(a Type, b Type) ?Type {
     if ua.type.is_int() && ub.type.is_int() {
       if ua.type.is_unsigned() != ub.type.is_unsigned() {
         larger_size := if ua.type.size() >= ub.type.size() { ua.type.size() } else { ub.type.size() }
-        if ua.type.is_unsigned() != ub.type.is_unsigned() {
-          // widen to signed of the larger size
-          return TypePrimitive{type: match larger_size {
-            1 { BuiltinType.i8 }
-            2 { BuiltinType.i16 }
-            else { BuiltinType.i32 }
-          }}
-        }
-        return if ua.type.size() >= ub.type.size() { ua } else { ub }
+        // widen to signed of the larger size
+        return TypePrimitive{type: match larger_size {
+          1 { BuiltinType.i8 }
+          2 { BuiltinType.i16 }
+          else { BuiltinType.i32 }
+        }}
       }
       if ua.type.size() >= ub.type.size() {
         return ua
@@ -689,21 +700,20 @@ fn join_types(a Type, b Type) ?Type {
 }
 
 fn cast_types(from Type, to Type) ?Type {
-  if are_types_equal(from, to) { return from.unqual() }
+  joined := join_types(from, to)
+  if joined != none {
+    if joined == to {
+      return to 
+    }
+  }
+
+
 
   uf := from.unqual()
   ut := to.unqual()
 
   if uf is TypePointer && ut is TypePointer {
     return ut
-  }
-  
-  if uf is TypeArray && ut is TypePointer {
-    if are_types_equal(uf.inner, ut.inner) {
-      return ut
-    } else {
-      return none
-    }
   }
 
   if uf is TypePrimitive && ut is TypePrimitive {
@@ -742,6 +752,7 @@ fn cast_types(from Type, to Type) ?Type {
     }
     return none
   }
+
 
   return none
 }

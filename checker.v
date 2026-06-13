@@ -47,7 +47,7 @@ struct MonomorphCache {
 
 @[noreturn]
 fn (c Checker) checker_error(s string) {
-  eprintln("${c.span} Checker Error -> \"${s}\"")
+  eprintln("${c.span} Checker Error -> ${s}")
 	exit(1)
 }
 
@@ -755,7 +755,6 @@ fn (mut c Checker) check_expr(expr Expr) Type {
           }
         }
         c.checker_error("member ${expr.member.name} doesn't exist in ${Type(lt)}")
-
       } else if lt is TypeType {
         if lt.name in c.table.enums {
           c.result.enum_accesses << expr.id
@@ -770,6 +769,7 @@ fn (mut c Checker) check_expr(expr Expr) Type {
     }
     ExprIndex {
       lt := c.check_expr(expr.indexee)
+      c.check_expr(expr.idx)
       if lt is TypeArray {
         lt.inner
       } else if lt is TypePointer {
@@ -777,7 +777,6 @@ fn (mut c Checker) check_expr(expr Expr) Type {
       } else {
         c.checker_error("cannot index from non-array type ${lt}")
       }
-      c.check_expr(expr.idx)
     }
     ExprRef {
       it := c.resolve_type(c.check_expr(expr.inner))
@@ -786,6 +785,9 @@ fn (mut c Checker) check_expr(expr Expr) Type {
     ExprDeref {
       lt := c.check_expr(expr.inner)
       if lt is TypePointer {
+        if lt.inner is TypePrimitive && lt.inner.type == .void {
+          c.checker_error("cannot dereference void pointer")
+        }
         lt.inner
       } else {
         c.checker_error("cannot dereference non-pointer type ${lt}")
@@ -797,7 +799,7 @@ fn (mut c Checker) check_expr(expr Expr) Type {
       if cast_types(what, resolved) == none {
         c.checker_error("cannot cast ${what} to ${resolved}")
       }
-      c.result.resolved[expr.id] = resolved 
+      c.result.resolved[expr.id] = resolved
       resolved
     }
     //else {c.checker_error("unimplemented check_expr() for ${expr}")}
@@ -829,12 +831,11 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
         c.checker_error("constant names must be upper case (${stmt.sym.name} -> ${stmt.sym.name.to_upper()})")
       }
       decl_t := c.resolve_type(stmt.sym.type)
-      if decl_t is TypePrimitive {
-        if decl_t.type == .void {
-          c.checker_error("cannot declare variable ${stmt.sym.name} of type void")
-        } else if decl_t.type == .any {
-          c.checker_error("type any can only be used for variadic function arguments")
-        }
+      if !decl_t.is_complete_type() {
+        c.checker_error("cannot create variable of incomplete type ${decl_t}")
+      }
+      if decl_t is TypePrimitive && decl_t.type == .any {
+        c.checker_error("type any can only be used for variadic function arguments")
       }
       
       for q in stmt.sym.qualifs {
@@ -849,8 +850,8 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
 
       j := c.check_assignment(vt, decl_t, stmt.sym.name)
 
-      if !are_types_equal(vt, j) {
-        c.result.implicit_casts[stmt.value.id] = j
+      if !are_types_equal(decl_t, j) {
+        c.result.implicit_casts[stmt.value.id] = decl_t 
       }
 
       c.register_sym(c.resolve_sym_types(stmt.sym))
@@ -893,6 +894,9 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
       for i := 0; i < stmt.sym.type.arg_types.len; i++ {
         n := stmt.sym.type.arg_names[i]
         t := c.resolve_type(stmt.sym.type.arg_types[i])
+        if !t.is_complete_type() {
+          c.checker_error("cannot have argument ${n} of incomplete type ${t}")
+        }
         if t.qualifs.contains(.const) && !n.is_upper() {
           c.checker_error("constant names must be upper case (${n} -> ${n.to_upper()})")
         }
@@ -914,8 +918,10 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
     }
 
     StmtDeclMember {
-      if !stmt.name.is_lower() {
-        c.checker_error("member names must be snake case (${stmt.name} -> ${stmt.name.camel_to_snake()})")
+      if !stmt.type.qualifs.contains(.const) && !stmt.name.is_lower() {
+        c.checker_error("variable names must be snake case (${stmt.name} -> ${stmt.name.camel_to_snake()})")
+      } else if stmt.type.qualifs.contains(.const) && !stmt.name.is_upper() {
+        c.checker_error("constant names must be upper case (${stmt.name} -> ${stmt.name.to_upper()})")
       }
       decl_t := stmt.type
       if decl_t is TypePrimitive && decl_t.type == .void {
@@ -1007,7 +1013,7 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
           b := stmt.elif_blocks[i]
 
           c.check_stmt_block(b)
-          if !are_types_equal(c.check_expr(g), Type(TypePrimitive{qualifs: [.const], type: .bool})) {
+          if !are_types_equal(c.check_expr(g), Type(TypePrimitive{type: .bool})) {
             c.checker_error("elif guards must be of type bool, got ${c.check_expr(g)}")
           }
         }
@@ -1036,7 +1042,10 @@ fn (mut c Checker) check_stmt(stmt Stmt) {
       lt := c.check_expr(stmt.assignee)
       rt := c.check_expr(stmt.val)
       jt := join_types(lt, rt) or {c.checker_error("cannot cast between ${rt} and ${lt}")}
-      if jt != lt {
+      if lt.qualifs.contains(.const) {
+        c.checker_error("cannot reassign to 'const' qualified symbol of type ${lt}")
+      }
+      if !are_types_equal(lt, jt) {
         c.checker_error("cannot implicitly cast ${rt} to ${lt}")
       }
       if !are_types_equal(rt, jt) {
