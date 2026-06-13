@@ -130,6 +130,12 @@ fn (mut g Generator) gen_expr(e Expr) string {
         }
         g.type_to_tid_str(t)
       }
+      ExprTypename {
+        t := g.checked_ast.resolved[e.expr.id] or {
+          g.gen_error("encountered unchecked ExprTypename with ID ${e.id}")
+        }
+        "\"${t.typename_str()}\""
+      }
       ExprLiteralPrimitive {
         s := match e.type.type {
           .i8, .u8, .i16, .u16, .i32, .u32 {e.value.i64.str()}

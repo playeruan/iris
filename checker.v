@@ -123,6 +123,7 @@ fn (mut c Checker) clone_expr(e Expr) Expr {
     ExprType           { ExprType{...e,           id: c.next_id()} }
     ExprSizeof         { ExprSizeof{...e, id: c.next_id(), expr: c.clone_expr(e.expr)} }
     ExprTypeof         { ExprTypeof{...e, id: c.next_id(), expr: c.clone_expr(e.expr)} }
+    ExprTypename       { ExprTypename{...e, id: c.next_id(), expr: c.clone_expr(e.expr)} }
   }
 }
 
@@ -566,6 +567,12 @@ fn (mut c Checker) check_expr(expr Expr) Type {
       TypeType {
         name: name
       }
+    }
+
+    ExprTypename {
+      t := c.check_expr(expr.expr)
+      c.result.resolved[expr.expr.id] = t
+      TypePointer{inner: TypePrimitive{type: .i8}}
     }
 
     ExprLiteralStruct {

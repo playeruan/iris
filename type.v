@@ -324,6 +324,51 @@ fn (t Type) compact_str() string {
   return type_str
 }
 
+fn (t Type) typename_str() string {
+  mut type_str := t.qualifs.str()
+  type_str += match t {
+    TypePrimitive {t.type.str()}
+    TypeType {"type"}
+    TypeStruct {t.name}
+    TypeEnum {t.name}
+    TypeFunc {
+      mut s := "("
+      assert(t.arg_names.len == 0 || t.arg_types.len == t.arg_names.len)
+			for i := 0; i < t.arg_types.len; i++ {
+        arg_t := t.arg_types[i]
+        arg_n := t.arg_names[i] or {""}
+				s += arg_n + ": "  + arg_t.str()
+				if i != t.arg_types.len-1 {
+					s += ", "
+				}
+			}
+
+      if t.variadic_type != none {
+        s += ", ...${t.variadic_type}"
+      }
+
+      if t.arg_types.len == 0 {
+        s += "void"
+      }
+
+      s += ") -> ${t.ret}"
+
+			s
+    }
+    TypePointer {
+      "^${t.inner.typename_str()}"
+    }
+    TypeArray {
+      "[]${t.inner.typename_str()}"
+    }
+    TypeUnresolved {
+      "?${t.name}"
+    }
+    TypeGeneric {t.name}
+  }
+  return type_str
+}
+
 fn (t Type) with_qualifs(qs []TypeQualifier) Type {
   mut no_dup := []TypeQualifier{}
   for q in qs {

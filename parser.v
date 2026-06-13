@@ -234,7 +234,7 @@ fn (mut p Parser) parse_primary() Expr {
       if p.peek().kind == .rsquare {
         p.advance()
         if p.peek().kind.is_primitive_type() {
-          p.parse_error("cannot create 'type' literal of array type")
+          p.parse_error("cannot create 'type' literal of array type yet")
         }
         p.parse_error("empty array is not a valid expression") 
       }
@@ -261,7 +261,7 @@ fn (mut p Parser) parse_primary() Expr {
     }
     .o_caret { 
       if p.peek().kind.is_primitive_type() {
-        p.parse_error("cannot create 'type' literal of pointer type")
+        p.parse_error("cannot create 'type' literal of pointer type yet")
       }
       ExprDeref{
         inner: p.parse_expr(.prefix)
@@ -286,6 +286,15 @@ fn (mut p Parser) parse_primary() Expr {
       p.expect(.rparen)
       es
     } 
+    .typename {
+      p.expect(.lparen)
+      es := ExprTypename{
+        expr: p.parse_expr(.literal)
+        id: p.next_id()
+      }
+      p.expect(.rparen)
+      es
+    }
     .nullptr {
       ExprLiteralNullptr{id: p.next_id()}
     }
