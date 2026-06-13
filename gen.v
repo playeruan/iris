@@ -86,7 +86,7 @@ fn (mut g Generator) gen_type_left(t Type, is_ret bool) string {
 
 fn (mut g Generator) gen_type_right(t Type, is_ret bool) string {
   return match t {
-    TypePrimitive, TypePointer, TypeStruct, TypeEnum {""}
+    TypePrimitive, TypePointer, TypeStruct, TypeEnum, TypeType {""}
     TypeArray   {
       if is_ret {""} else {"[]"}
     }

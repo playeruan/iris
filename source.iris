@@ -1,19 +1,6 @@
 
-generic T
-struct Test {
-  X: const T;
-}
-
-generic T
-foo: (X: const T) {
-  X = 10;
-}
-
 main: () -> i32 {
-  t: Test<const i32> = Test<const i32>(2);
-  foo(9);
-  t.X = 3;
-
+  t: type = i32;
   ret 0;
 }
 

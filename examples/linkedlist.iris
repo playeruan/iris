@@ -5,11 +5,21 @@ main: () -> i32 {
     ll_append(&ll, 69);
     ll_append(&ll, 420);
     ll_append(&ll, 1337);
-    ll_append(&ll, 69420);
+    ll_prepend(&ll, 69420);
 
     ll_print(ll);
 
     ll_delete(&ll);
+
+    ll2: ^LinkedListNode<f32> = ll_create(2.2);
+    ll_append(&ll2, 10.0);
+    ll_append(&ll2, 25.5);
+    ll_append(&ll2, 13.37);
+    ll_prepend(&ll2, 60.06);
+
+    ll_print(ll2);
+
+    ll_delete(&ll2);
   
     ret 0;
 }
