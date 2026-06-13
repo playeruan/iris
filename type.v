@@ -325,16 +325,20 @@ fn (t Type) compact_str() string {
 }
 
 fn (t Type) with_qualifs(qs []TypeQualifier) Type {
+  mut no_dup := []TypeQualifier{}
+  for q in qs {
+    if !no_dup.contains(q) {no_dup << q}
+  }
   return match t {
-    TypePrimitive {TypePrimitive{qualifs: qs, type: t.type}}
-    TypeFunc {TypeFunc {qualifs: qs, arg_types: t.arg_types, arg_names: t.arg_names, ret: t.ret}}
-    TypePointer {TypePointer{qualifs: qs, inner: t.inner}}
-    TypeArray {TypeArray{qualifs: qs, inner: t.inner}}
-    TypeStruct {TypeStruct{qualifs: qs, name: t.name, generic_args: t.generic_args, generic_base: t.generic_base}}
-    TypeEnum {TypeEnum{qualifs: qs, name: t.name, as: t.as}}
-    TypeUnresolved{TypeUnresolved{qualifs: qs, name: t.name}}
-    TypeGeneric {TypeGeneric{qualifs: qs, name: t.name}}
-    TypeType {TypeType{qualifs: qs, name: t.name}}
+    TypePrimitive {TypePrimitive{qualifs: no_dup, type: t.type}}
+    TypeFunc {TypeFunc {qualifs: no_dup, arg_types: t.arg_types, arg_names: t.arg_names, ret: t.ret}}
+    TypePointer {TypePointer{qualifs: no_dup, inner: t.inner}}
+    TypeArray {TypeArray{qualifs: no_dup, inner: t.inner}}
+    TypeStruct {TypeStruct{qualifs: no_dup, name: t.name, generic_args: t.generic_args, generic_base: t.generic_base}}
+    TypeEnum {TypeEnum{qualifs: no_dup, name: t.name, as: t.as}}
+    TypeUnresolved{TypeUnresolved{qualifs: no_dup, name: t.name}}
+    TypeGeneric {TypeGeneric{qualifs: no_dup, name: t.name}}
+    TypeType {TypeType{qualifs: no_dup, name: t.name}}
   }
 }
 

@@ -4,15 +4,16 @@ struct Test {
   X: const T;
 }
 
-struct Test2 {
-  X: const i32;
+generic T
+foo: (X: const T) {
+  X = 10;
 }
 
 main: () -> i32 {
-  t: Test<i32> = Test<i32>(2);
-  t.X = 3; // TODO: fix type qualifiers for generic struct members
-  t2: Test2 = Test2(10);
-  t2.X = 12;
+  t: Test<const i32> = Test<const i32>(2);
+  foo(9);
+  t.X = 3;
+
   ret 0;
 }
 

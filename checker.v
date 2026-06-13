@@ -364,7 +364,10 @@ fn (mut c Checker) instantiate_struct(name string, subst map[string]Type) !StmtD
 fn (mut c Checker) resolve_type(t Type) Type {
   if t is TypeGeneric {
     if t.name in c.generic_subst {
-      return c.generic_subst[t.name] or {c.checker_error("unreachable ${@LINE}")}
+      sub := c.generic_subst[t.name] or {c.checker_error("unreachable ${@LINE}")}
+      mut both_qualifs := sub.qualifs.clone()
+      both_qualifs << t.qualifs
+      return sub.with_qualifs(both_qualifs)
     }
     return TypeGeneric{name: t.name} 
   }
@@ -390,9 +393,12 @@ fn (mut c Checker) resolve_type(t Type) Type {
     }
     if t.name in c.generic_params {
       if t.name in c.generic_subst {
-        return c.generic_subst[t.name] or { c.checker_error("unreachable ${@LINE}") }
+        sub := c.generic_subst[t.name] or {c.checker_error("unreachable ${@LINE}")}
+        mut both_qualifs := sub.qualifs.clone()
+        both_qualifs << t.qualifs
+        return sub.with_qualifs(both_qualifs)
       }
-      return TypeGeneric{name: t.name}
+      return TypeGeneric{qualifs: t.qualifs, name: t.name}
     }
     c.checker_error("type ${Type(t)} could not be resolved")
   }
