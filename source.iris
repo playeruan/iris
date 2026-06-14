@@ -1,15 +1,10 @@
 include "bindings/libc.iris"
 
-struct Vec2 {
-  x: i32;
-  y: i32;
-}
 
 main: () -> i32 {
-  x: []u8 = [2, 5, 1];
-  printf("%s\n", typename(printf));
-  printf("%s\n", typename(&x));
+  x: i16 = 22;
+  printf("%s\n", typename(typeof(x)));
   ret 0;
-}
+} 
 
 

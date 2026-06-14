@@ -18,6 +18,9 @@ struct Generator {
 
   libs_to_link []string
   hs_to_include []string
+
+  created_tids []string
+  last_tid i32
 }
 
 struct GeneratorResult {
@@ -45,11 +48,26 @@ fn (g Generator) mangle_ident(s string) string {
   return "iris_${s}_"
 }
 
-fn (g Generator) type_to_tid_str(t Type) string {
+fn (mut g Generator) next_tid() i32 {
+  g.last_tid++
+  return g.last_tid
+}
+
+fn (mut g Generator) type_to_tid_str(t Type) string {
   return match t {
     TypePrimitive {"${t.type.str()}_tid"}
     TypeStruct, TypeEnum {"${t.name}_tid"}
     TypeType {"type_tid"}
+    TypePointer {
+      s := "ptr_${g.type_to_tid_str(t.inner)}"
+      if !g.created_tids.contains(s) {g.created_tids << s}
+      s
+    }
+    TypeArray {
+      s := "arr_${g.type_to_tid_str(t.inner)}"
+      if !g.created_tids.contains(s) {g.created_tids << s}
+      s
+    }
     else {g.gen_error("unrechable ${@LINE}")}
   }
 }
@@ -134,7 +152,12 @@ fn (mut g Generator) gen_expr(e Expr) string {
         t := g.checked_ast.resolved[e.expr.id] or {
           g.gen_error("encountered unchecked ExprTypename with ID ${e.id}")
         }
-        "\"${t.typename_str()}\""
+        if t is TypeType {
+          "\"${t.name}\""
+        } else {
+          g.gen_error("unrechable @LINE")
+        }
+
       }
       ExprLiteralPrimitive {
         s := match e.type.type {
@@ -414,6 +437,9 @@ fn Generator.gen_program(checked_ast CheckedAST) GeneratorResult {
   generated += "typedef enum {\n"
   for t, id in g.checked_ast.type_id_map {
     generated += "\t${t}_tid = ${id},\n"
+  }
+  for ct in g.created_tids {
+    generated += "\t${ct},\n"
   }
   generated += "} TypeEnum ;\n\n"
 

@@ -233,10 +233,17 @@ fn (mut p Parser) parse_primary() Expr {
     .lsquare {
       if p.peek().kind == .rsquare {
         p.advance()
-        if p.peek().kind.is_primitive_type() {
-          p.parse_error("cannot create 'type' literal of array type yet")
+        inner := p.parse_expr(.prefix)
+        if inner is ExprType {
+          return ExprType {
+            type: TypeArray {
+              inner: inner.type
+            }
+            id: p.next_id()
+          }
+        } else {
+          p.parse_error("empty array is not a valid expression") 
         }
-        p.parse_error("empty array is not a valid expression") 
       }
       
       mut elems := []Expr{}
@@ -260,13 +267,20 @@ fn (mut p Parser) parse_primary() Expr {
       }
     }
     .o_caret { 
-      if p.peek().kind.is_primitive_type() {
-        p.parse_error("cannot create 'type' literal of pointer type yet")
-      }
-      ExprDeref{
-        inner: p.parse_expr(.prefix)
-        id: p.next_id()
-      }
+      inner := p.parse_expr(.prefix)
+      if inner is ExprType {
+        ExprType {
+          type: TypePointer {
+            inner: inner.type
+          }
+          id: p.next_id()
+        }
+      } else {
+        ExprDeref{
+          inner: inner 
+          id: p.next_id()
+        }
+      } 
     }
     .sizeof {
       p.expect(.lparen)

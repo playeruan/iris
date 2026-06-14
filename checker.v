@@ -1,8 +1,6 @@
 
 module main
 
-// TODO: fix cast to pointer
-
 struct Checker {
   mut: 
   table SymbolTable
@@ -489,12 +487,7 @@ fn (mut c Checker) check_expr(expr Expr) Type {
     ExprLiteralNullptr {TypePointer{inner: TypePrimitive{type: .void}}}
     ExprType {
       res := c.resolve_type(expr.type)
-      result := match res {
-        TypeStruct {Type(TypeType {name: res.name})}
-        TypeEnum   {TypeType {name: res.name}}
-        TypePrimitive {TypeType {name: res.type.str()}}
-        else {c.checker_error("Type expressions not supported for ${res} as of now")}
-      }
+      result := TypeType{name: res.typename_str()}
       c.result.resolved[expr.id] = res 
       result
     }
@@ -558,19 +551,16 @@ fn (mut c Checker) check_expr(expr Expr) Type {
     ExprTypeof {
       t := c.check_expr(expr.expr)
       c.result.resolved[expr.expr.id] = t
-      name := match t {
-        TypeStruct, TypeEnum {t.name}
-        TypePrimitive {t.type.str()}
-        TypeType      {"type"}
-        else {c.checker_error("TODO: rest")}
-      }
       TypeType {
-        name: name
+        name: t.typename_str() 
       }
     }
 
     ExprTypename {
       t := c.check_expr(expr.expr)
+      if t !is TypeType {
+        c.checker_error("typename argument must be compile-time type (literal type or typeof expr) ")
+      }
       c.result.resolved[expr.expr.id] = t
       TypePointer{inner: TypePrimitive{type: .i8}}
     }
@@ -690,28 +680,28 @@ fn (mut c Checker) check_expr(expr Expr) Type {
       if expr.name in c.generic_subst {
         t := c.generic_subst[expr.name] or {c.checker_error("unreachable ${@LINE}")}
         c.result.resolved[expr.id] = t 
-        return TypeType{name: Type(t).str()}
+        return TypeType{name: Type(t).typename_str()}
       } 
       if expr.name in c.table.structs {
         sym_ := c.table.structs[expr.name] or {c.checker_error("unreachable ${@LINE}")}
         c.result.resolved[expr.id] = sym_.type 
-        return TypeType{name: Type(sym_.type).str()}
+        return TypeType{name: Type(sym_.type).typename_str()}
       }
       if expr.name in c.table.enums {
         sym_ := c.table.enums[expr.name] or {c.checker_error("unreachable ${@LINE}")}
         c.result.resolved[expr.id] = sym_.type 
-        return TypeType{name: Type(sym_.type).str()}
+        return TypeType{name: Type(sym_.type).typename_str()}
       }
       if expr.name in c.generic_decls && c.generic_decls[expr.name].decl is StmtDeclStruct {
         decl := c.generic_decls[expr.name] or {c.checker_error("unreachable ${@LINE}")}
         decl_inner := decl.decl as StmtDeclStruct
         c.result.resolved[expr.id] = decl_inner.sym.type
-        return TypeType{name: Type(decl_inner.sym.type).str()}
+        return TypeType{name: Type(decl_inner.sym.type).typename_str()}
       }
       if is_builtin_type(expr.name) {
         t := BuiltinType.from_string(expr.name)
         c.result.resolved[expr.id] = TypePrimitive{type: t}
-        return TypeType{name: Type(TypePrimitive{type: t}).str()}
+        return TypeType{name: Type(TypePrimitive{type: t}).typename_str()}
       }
       sym := c.current_scope.lookup_sym(expr.name) or {
         c.checker_error("undeclared symbol ${expr.name}")
