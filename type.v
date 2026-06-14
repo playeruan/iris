@@ -336,8 +336,7 @@ fn (t Type) typename_str() string {
       assert(t.arg_names.len == 0 || t.arg_types.len == t.arg_names.len)
 			for i := 0; i < t.arg_types.len; i++ {
         arg_t := t.arg_types[i]
-        arg_n := t.arg_names[i] or {""}
-				s += arg_n + ": "  + arg_t.str()
+				s += arg_t.typename_str()
 				if i != t.arg_types.len-1 {
 					s += ", "
 				}
