@@ -709,18 +709,31 @@ fn (mut c Checker) check_expr(expr Expr) Type {
       sym.type
     }
     ExprUnary {
-      // TODO: check op is valid
-      c.check_expr(expr.operand)
+      ot := c.check_expr(expr.operand)
+      if !ot.is_op_valid(expr.op) {
+        c.checker_error("operator '${expr.op}' is not defined for type '${ot}'")
+      }
+      ot
     }
     ExprBinary {  
       lt := c.check_expr(expr.left)
       rt := c.check_expr(expr.right)
+
       mut pointer_arith := false
-      if lt is TypePointer && rt is TypePrimitive && rt.type.is_int() {
-        pointer_arith = true
-        if expr.op != "+" {
-          c.checker_error("pointer arithmetic is only possible with + operator")
+
+      if !lt.is_op_valid(expr.op) {
+        c.checker_error("operator '${expr.op}' is not defined for type '${lt}'")
+      }
+
+      if !rt.is_op_valid(expr.op) {
+        c.checker_error("operator '${expr.op}' is not defined for type '${rt}'")
+      }
+
+      if lt is TypePointer && rt is TypePrimitive {
+        if !rt.type.is_int() {
+          c.checker_error("pointer arithmetic is only possible between a pointer and an int type")
         }
+        pointer_arith = true
       }
 
       j := join_types(lt, rt) or {

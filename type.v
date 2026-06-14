@@ -153,6 +153,26 @@ fn (t Type) is_complete_type() bool {
   return true
 }
 
+fn (t Type) is_op_valid(op string) bool {
+  valid := match t {
+    TypePointer {["+", "-", "+=", "-=", "++", "--", "==", "!="]}
+    TypeType {["==", "!="]}
+    TypeEnum {["+", "-", "+=", "-=", "++", "--", "<", ">", "<=", ">=", "!=", "=="]}
+    TypePrimitive {
+      match t.type {
+        .i8, .u8, .i16, .u16, .i32, .u32, .f32, .f64 {
+          ["+", "-", "*", "/", "%", "+=", "-=", "*=", "/=", "%=", 
+          "++", "--", "<", ">", "<=", ">=", "!=", "==", "||", "&&", "~"]
+        }
+        .bool {["==", "!=", "&&", "||", "!"]}
+        .void, .any, .type {[]}
+      }
+    }
+    TypeArray, TypeFunc, TypeStruct, TypeUnresolved, TypeGeneric {[]string([])}
+  }
+  return valid.contains(op)
+}
+
 fn BuiltinType.smallest_int(from i64, unsigned bool) BuiltinType {
   if unsigned {
     assert(from < 1<<32)
@@ -235,7 +255,7 @@ fn (t Type) str() string {
        t.type.str()
     }
     TypeType {
-      "type ${t.name}"
+      "comp-time type"
     }
     TypeStruct {
       "struct ${t.name}"

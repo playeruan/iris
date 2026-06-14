@@ -2,9 +2,9 @@ include "bindings/libc.iris"
 
 
 main: () -> i32 {
-  x: i16 = 22;
-  printf("%s\n", typename(typeof(x)));
-  printf("%s\n", typename(typeof(printf)));
+  if true < false {
+
+  }
   ret 0;
 } 
 
